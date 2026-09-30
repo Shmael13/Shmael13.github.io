@@ -94,7 +94,7 @@
         <div>
           <h4><a href="https://github.com/Shmael13/Elec537Project">Activity recognition from accelerometer data</a></h4>
           <p>Classifies one-second windows of 50 Hz, 3-axis accelerometer data as moving or sleeping, comparing classical models on hand-built window features against 1D CNN, LSTM and GRU models on the raw sequences.</p>
-          <p class="result">An RBF SVM on 14 window features reached <b>93%</b> on held-out recordings, well ahead of the deep models trained on only nine recordings.</p>
+          <p class="result">A scaled kNN on 14 window features reached <b>93%</b> on held-out recordings, ahead of every deep model (71&ndash;82%) with only nine recordings to train on. The whole comparison reproduces exactly from a fixed seed.</p>
           <div class="meta"><span>Python, scikit-learn, TensorFlow/Keras</span><a href="https://github.com/Shmael13/Elec537Project">Code</a></div>
         </div>
       </li>
