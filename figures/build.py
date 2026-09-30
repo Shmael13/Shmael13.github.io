@@ -33,32 +33,37 @@ def bar_path(x0, y, length, thick, r=4):
 
 # ---------------------------------------------------------------- leakproof
 def fig_leakproof():
+    # Techniques from the paper's benchmark table, named in plain words.
     rows = [
         ("leakproof", 78, True),
-        ("Replay, every row", 68, False),
-        ("Replay, 25 random rows", 61.4, False),
-        ("Look-ahead linters", 18, False),
-        ("Sanity test", 14, False),
-        ("Out-of-sample test", 8, False),
-        ("Point-in-time data", 8, False),
-        ("ML leakage tools", 0, False),
+        ("Re-run hiding the future, at every day", 68, False),
+        ("Same, at 25 random days", 61.4, False),
+        ("Linters that look for look-ahead", 18, False),
+        ("Flag any Sharpe ratio above 5", 14, False),
+        ("Hold out the last 30% of days", 8, False),
+        ("Point-in-time database", 8, False),
+        ("ML data-leakage detectors", 0, False),
     ]
-    label_w, pitch, thick, top = 138, 22, 12, 4
-    x0, x_max = label_w, W - 34
-    scale = (x_max - x0) / 78
-    h = top + pitch * len(rows) + 4
-    parts = [f'<line class="axis" x1="{x0}" x2="{x0}" y1="{top}" y2="{h - 4}"/>']
+    pitch, thick, top = 33, 8, 2
+    x0, x1 = 0, W
+    scale = (x1 - x0) / 78
+    h = top + pitch * len(rows)
+    parts = []
     for i, (name, v, hl) in enumerate(rows):
-        y = top + i * pitch + (pitch - thick) / 2
+        y = top + i * pitch
+        by = y + 17
         cls = "s1" if hl else "bar-muted"
         shown = f"{v:g}"
-        parts.append(f'<g><title>{escape(name)}: {shown} of 78 leaks</title>'
-                     f'<rect class="hit" x="0" y="{top + i * pitch}" width="{W}" height="{pitch}"/>'
-                     f'<path class="{cls}" d="{bar_path(x0 + 1, y, v * scale, thick)}"/>'
-                     f'<text class="lbl{" strong" if hl else ""}" x="{x0 - 8}" y="{y + thick - 2}" text-anchor="end">{escape(name)}</text>'
-                     f'<text class="val" x="{x0 + 1 + v * scale + 6}" y="{y + thick - 2}">{shown}</text></g>')
-    desc = "; ".join(f"{n}: {v:g}" for n, v, _ in rows)
-    return svg("fig-lp", h, "Leaks detected, out of 78", desc, "".join(parts))
+        missed = 78 - v
+        tip = f"{name}: caught {shown} of 78 leaks" + (f", missed {missed:g}" if missed else "")
+        parts.append(f'<g><title>{escape(tip)}</title>'
+                     f'<rect class="hit" x="0" y="{y}" width="{W}" height="{pitch}"/>'
+                     f'<text class="lbl{" strong" if hl else ""}" x="{x0}" y="{y + 11}">{escape(name)}</text>'
+                     f'<text class="val" x="{x1}" y="{y + 11}" text-anchor="end">{shown}</text>'
+                     f'<rect class="track" x="{x0}" y="{by}" width="{x1 - x0}" height="{thick}" rx="2"/>'
+                     f'<path class="{cls}" d="{bar_path(x0, by, v * scale, thick, r=2)}"/></g>')
+    desc = "; ".join(f"{n}: {v:g} of 78" for n, v, _ in rows)
+    return svg("fig-lp", h, "Leaks caught out of 78, by technique", desc, "".join(parts))
 
 
 # ---------------------------------------------------------------- market sim
