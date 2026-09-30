@@ -1,19 +1,19 @@
-// "What has this number seen?" -- leakproof's four questions on small cases.
-// Time runs left to right. Each trading day has an open and, half a day later,
-// a close. Anything to the right of the trade line is not yet known when the
-// trade is made.
+// "Spot the leak": leakproof's four kinds of peeking, each as a short code
+// sketch, a one-arrow timeline, and the verdict. The small print under each
+// rejection is leakproof's own message from its four-questions example.
 (function () {
-  const svg = document.getElementById("lab-svg");
-  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-  const variantsBox = document.getElementById("lab-variants");
-  const questionEl = document.getElementById("lab-question");
-  const verdictEl = document.getElementById("lab-verdict");
-  const noteEl = document.getElementById("lab-note");
-  const legendItems = Array.from(document.querySelectorAll(".lab-legend [data-key]"));
-  if (!svg || !tabs.length) return;
+  const tabs = Array.from(document.querySelectorAll(".spot-tabs [role='tab']"));
+  const panel = document.getElementById("spot-panel");
+  const codeEl = document.getElementById("spot-code");
+  const fixEl = document.getElementById("spot-fix");
+  const svg = document.getElementById("spot-svg");
+  const alertEl = document.getElementById("spot-alert");
+  const iconEl = document.getElementById("spot-icon");
+  const verdictEl = document.getElementById("spot-verdict");
+  const toolEl = document.getElementById("spot-tool");
+  if (!tabs.length || !svg) return;
 
   const NS = "http://www.w3.org/2000/svg";
-
   function el(parent, name, attrs, text) {
     const node = document.createElementNS(NS, name);
     for (const k in attrs) node.setAttribute(k, attrs[k]);
@@ -22,346 +22,241 @@
     return node;
   }
 
-  // Layout from the rendered width, so text stays at its CSS size.
-  // t0..t1 is the stretch of time shown; lanes are the rows of the drawing.
-  function layout(t0, t1, lanes, opts) {
-    opts = opts || {};
-    const W = Math.max(300, svg.parentElement.clientWidth);
-    const narrow = W < 600;
-    const labelW = narrow ? 58 : 128;
-    const span = t1 - t0;
-    const unit = (W - labelW - 8) / span;
-    const cell = opts.cell || Math.max(12, Math.min(28, unit * (narrow ? 0.34 : 0.26)));
-    const laneH = cell + (narrow ? 14 : 18);
-    const top = 34;
-    const below = opts.below || 58;
-    const H = top + lanes * laneH + below;
-    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    svg.setAttribute("height", H);
-    svg.replaceChildren();
-    const defs = el(svg, "defs", {});
-    const pat = el(defs, "pattern", { id: "future-hatch", width: 8, height: 8, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" });
-    el(pat, "line", { class: "hatch", x1: 0, y1: 0, x2: 0, y2: 8 });
-    return {
-      W, H, narrow, labelW, cell, laneH, top, t0, t1,
-      x: (t) => labelW + (t - t0) * unit,
-      laneY: (i) => top + i * laneH + laneH / 2,
-      lanesBottom: top + lanes * laneH,
-    };
-  }
-
-  function laneLabel(L, i, wide, short) {
-    el(svg, "text", { class: "lane", x: L.labelW - 12, y: L.laneY(i) + 4, "text-anchor": "end" }, L.narrow ? short : wide);
-  }
-
-  function cell(L, cx, cy, state, tip) {
-    const s = L.cell;
-    const g = el(svg, "g", { class: "cell " + state });
-    el(g, "rect", { x: cx - s / 2, y: cy - s / 2, width: s, height: s, rx: 3 });
-    if (tip) el(g, "title", {}, tip);
-    return g;
-  }
-
-  // Hatched "not yet known" region to the right of the trade.
-  function future(L, t, label) {
-    const x = L.x(t);
-    el(svg, "rect", { class: "future", x, y: L.top - 6, width: L.W - x, height: L.lanesBottom - L.top + 6 });
-    if (label) {
-      const t = el(svg, "text", { class: "future-label", x: L.W - 4, y: L.top - 12, "text-anchor": "end" }, label);
-      if (t.getComputedTextLength() > L.W - x - 14) t.style.display = "none";
-    }
-  }
-
-  // The moment of the trade (or of the pick), as a vertical line with a label.
-  function moment(L, t, label) {
-    const x = L.x(t);
-    el(svg, "line", { class: "moment", x1: x, x2: x, y1: L.top - 20, y2: L.lanesBottom });
-    const text = el(svg, "text", { class: "moment-label", x: x - 6, y: L.top - 12, "text-anchor": "end" }, label);
-    if (x - 6 - text.getComputedTextLength() < 2) { text.setAttribute("text-anchor", "start"); text.setAttribute("x", x + 6); }
-  }
-
-  // A bracket under part of the drawing with a short label.
-  function bracket(L, xa, xb, y, label, cls) {
-    const g = el(svg, "g", { class: "bracket " + (cls || "") });
-    el(g, "path", { d: `M${xa},${y - 5}V${y}H${xb}V${y - 5}` });
-    const mid = (xa + xb) / 2;
-    const t = el(g, "text", { x: mid, y: y + 15, "text-anchor": "middle" }, label);
-    const w = t.getComputedTextLength();
-    if (mid - w / 2 < 2) { t.setAttribute("text-anchor", "start"); t.setAttribute("x", Math.min(xa, 2)); }
-    else if (mid + w / 2 > L.W - 2) { t.setAttribute("text-anchor", "end"); t.setAttribute("x", L.W - 2); }
-    return g;
-  }
-
-  // offset: where a day's label sits within the day (0.25 = between its open and close)
-  function dayAxis(L, days, y, offset) {
-    const off = offset == null ? 0.25 : offset;
-    days.forEach((d) => el(svg, "text", { class: "tick", x: L.x(d + off), y, "text-anchor": "middle" }, L.narrow ? d : `day ${d}`));
-  }
-
-  // ---- the four cases -----------------------------------------------------
+  // Code lines: [text, highlighted?]. Highlighted lines are where the leak is.
   const CASES = {
     when: {
-      legend: { ok: "used, and already known", late: "used before it was known", future: "not yet known at the trade", mark: "where it trades" },
-      question: "Could this trade have been placed with what was known at the time?",
-      variants: [
-        {
-          label: "Trade at today's open",
-          entry: 6,
-          ok: false,
-          plain: "Leak: the signal uses today's close, which doesn't exist yet when it trades at today's open.",
-          msg: "look-ahead bias: the position of row 6 uses what is known only at the close of row 6, but it must be decided by the close of row 5",
-          note: "The signal is today's return, so it needs the close of day 6. That close prints half a day after the open of day 6, where the trade is placed.",
-        },
-        {
-          label: "Trade at tomorrow's open",
-          entry: 7,
-          ok: true,
-          plain: "Accepted, graded tradable: everything the signal uses is known before the trade.",
-          note: "The same signal traded one open later is fine: the close of day 6 prints half a day before the open of day 7.",
-        },
-      ],
-      draw(v) {
-        const days = [3, 4, 5, 6, 7, 8];
-        const L = layout(2.75, 9, 2);
-        future(L, v.entry, L.narrow ? "not known yet" : "not yet known at the trade");
-        laneLabel(L, 0, "opening price", "open");
-        laneLabel(L, 1, "closing price", "close");
-        for (const d of days) {
-          const isEntry = d === v.entry;
-          cell(L, L.x(d), L.laneY(0), isEntry ? "mark" : "plain",
-            isEntry ? `open of day ${d}: the trade is placed at this price` : `open of day ${d}`);
-          const used = d === 5 || d === 6;
-          const state = used ? (d + 0.5 < v.entry ? "ok" : "late") : "plain";
-          cell(L, L.x(d + 0.5), L.laneY(1), state,
-            `close of day ${d}` + (used ? (state === "ok" ? ": used by the signal, known before the trade" : ": used by the signal before it is known") : ""));
-        }
-        moment(L, v.entry, L.narrow ? `trade, day ${v.entry}` : `trade: open of day ${v.entry}`);
-        const y = L.lanesBottom + 4;
-        bracket(L, L.x(5.5) - L.cell / 2, L.x(6.5) + L.cell / 2, y, "the signal uses these two closes", v.ok ? "" : "bad");
-        dayAxis(L, days, y + 40);
+      bad: {
+        code: [
+          ["up = df.Close > df.Close.shift(1)   # did it rise today?", false],
+          ["buy_at = df.Open                    # then buy at today's open", true],
+        ],
+        verdict: "Rejected. To buy at Monday's 9:30 open, it needs Monday's 4:00 pm close, which doesn't exist yet.",
+        tool: "look-ahead bias: the position of row 1 uses what is known only at the close of row 1, but it must be decided by the close of row 0",
+      },
+      good: {
+        code: [
+          ["up = df.Close > df.Close.shift(1)   # did it rise today?", false],
+          ["buy_at = df.Open.shift(-1)          # buy at tomorrow's open", true],
+        ],
+        verdict: "Accepted, graded tradable. Monday's close is known 17½ hours before Tuesday's open.",
+      },
+      draw(fixed) {
+        const T = timeline(fixed
+          ? [{ at: 0.2, label: "Mon 4:00 pm close", kind: "info", note: "the signal needs this price" },
+             { at: 0.8, label: "Tue 9:30 am open", kind: "trade", note: "the trade happens here" }]
+          : [{ at: 0.2, label: "Mon 9:30 am open", kind: "trade", note: "the trade happens here" },
+             { at: 0.8, label: "Mon 4:00 pm close", kind: "info", note: "the signal needs this price" }]);
+        arrow(T, fixed ? 0.2 : 0.8, fixed ? 0.8 : 0.2, !fixed,
+          fixed ? "known 17½ hours before the trade" : "used 6½ hours before it exists");
       },
     },
 
     which: {
-      legend: { ok: "used by the model", late: "an answer the model trained on", mark: "an answer it is graded on" },
-      question: "Did the model see the answers it is graded on?",
-      variants: [
-        {
-          label: "Shuffled cross-validation",
-          train: [0, 1, 3, 6, 7, 8],
-          dropped: [],
-          ok: false,
-          plain: "Leak: the model trained on days whose data contains the answers it is then graded on.",
-          msg: "the forecast of row 4 has seen its own outcome: it reads row 5 of `bar.close`, and it is scored on rows 5 to 6",
-          note: "Days 4 and 5 each predict the next close. Shuffled folds still train on days 6 to 8, and those days' data includes the closes of days 5 and 6: the answers.",
-        },
-        {
-          label: "Purged cross-validation",
-          train: [0, 1, 2, 3, 8],
-          dropped: [6, 7],
-          ok: true,
-          plain: "Accepted, graded out-of-sample: the model never saw the answers.",
-          note: "Purging drops days 6 and 7, whose data overlaps the answers. It still trains on day 8, after the test, so it could not have run live. That's why the grade is out-of-sample, not tradable.",
-        },
-      ],
-      draw(v) {
-        const days = [...Array(10).keys()];
-        const L = layout(0, 10, 3, { below: 62 });
-        laneLabel(L, 0, "trained on", "train");
-        laneLabel(L, 1, "graded on", "test");
-        laneLabel(L, 2, "closing price", "close");
-        const train = new Set(v.train), dropped = new Set(v.dropped), test = new Set([4, 5]);
-        const answers = new Set([5, 6]); // day r is graded on the close of day r + 1
-        const model = new Set();
-        train.forEach((i) => [i - 1, i, i + 1].forEach((c) => c >= 0 && c < 10 && model.add(c)));
-        const inputs = new Set([3, 4, 5]);
-        const barH = Math.max(8, L.cell * 0.55);
-        const seg = (lane, d, cls, tip) => {
-          const g = el(svg, "g", { class: "seg " + cls });
-          el(g, "rect", { x: L.x(d) + 2, y: L.laneY(lane) - barH / 2, width: L.x(d + 1) - L.x(d) - 4, height: barH, rx: 2 });
-          el(g, "title", {}, tip);
-        };
-        for (const d of days) {
-          if (train.has(d)) seg(0, d, "seg-train", `day ${d} is in the training folds`);
-          if (dropped.has(d)) seg(0, d, "seg-dropped", `day ${d} is dropped: its data overlaps the answers`);
-          if (test.has(d)) seg(1, d, "seg-test", `day ${d} is predicted and graded`);
-          let state = "plain", tip = `close of day ${d}`;
-          if (model.has(d) && answers.has(d)) { state = "late"; tip += ": an answer, and the model trained on it"; }
-          else if (answers.has(d)) { state = inputs.has(d) || model.has(d) ? "ok mark-ring" : "mark"; tip += ": an answer the model is graded on"; }
-          else if (model.has(d) || inputs.has(d)) { state = "ok"; tip += ": used by the model"; }
-          cell(L, L.x(d + 0.5), L.laneY(2), state, tip);
+      bad: {
+        code: [
+          ["y  = df.Close.pct_change().shift(-1)  # answer: next day's return", false],
+          ["cv = KFold(5, shuffle=True)           # folds shuffled across time", true],
+          ["score = cross_val_score(model, X, y, cv=cv)", false],
+        ],
+        verdict: "Rejected. The model is graded on days 4 and 5, but it trained on days 6 and 7, whose prices are the answers.",
+        tool: "the forecast of row 0 has seen its own outcome: it reads row 1 of `bar.close`, and it is scored on rows 1 to 1",
+      },
+      good: {
+        code: [
+          ["y  = df.Close.pct_change().shift(-1)  # answer: next day's return", false],
+          ["cv = purged_kfold(5)   # drop training days next to each test fold", true],
+          ["score = cross_val_score(model, X, y, cv=cv)", false],
+        ],
+        verdict: "Accepted, graded out-of-sample. It never sees the answers, but it still trains on later days, so it isn't a result you could have traded live, and the grade says so.",
+      },
+      draw(fixed) {
+        const W = size(), narrow = W < 520;
+        const H = 150;
+        setBox(W, H);
+        const left = 8, right = W - 8, n = 10;
+        const colW = (right - left) / n;
+        const cx = (d) => left + (d + 0.5) * colW;
+        const rows = { train: 30, test: 64 };
+        el(svg, "text", { class: "t-lab", x: left, y: 16 }, "trained on");
+        el(svg, "text", { class: "t-lab", x: left, y: 56 + 0 }, "graded on");
+        const train = fixed ? [0, 1, 2, 3, 8] : [0, 1, 3, 6, 7, 8];
+        const dropped = fixed ? [6, 7] : [];
+        const bw = Math.min(colW - 4, 44);
+        for (let d = 0; d < n; d++) {
+          if (train.includes(d)) {
+            const bad = !fixed && (d === 6 || d === 7);
+            el(svg, "rect", { class: bad ? "blk leak" : "blk", x: cx(d) - bw / 2, y: rows.train - 8, width: bw, height: 14 });
+          }
+          if (dropped.includes(d)) el(svg, "rect", { class: "blk dither", x: cx(d) - bw / 2, y: rows.train - 8, width: bw, height: 14 });
+          if (d === 4 || d === 5) el(svg, "rect", { class: "blk hollow", x: cx(d) - bw / 2, y: rows.test - 8, width: bw, height: 14 });
+          el(svg, "text", { class: "t-tick", x: cx(d), y: 118, "text-anchor": "middle" }, narrow ? d : `day ${d}`);
         }
-        const y = L.lanesBottom + 4;
-        bracket(L, L.x(5.5) - L.cell / 2, L.x(6.5) + L.cell / 2, y, "the answers", v.ok ? "" : "bad");
-        if (v.dropped.length) {
-          const t = el(svg, "text", { class: "seg-note", x: L.x(7), y: L.laneY(0) - barH / 2 - 5, "text-anchor": "middle" }, "dropped");
-          if (L.narrow) t.style.display = "none";
-        }
-        dayAxis(L, L.narrow ? days.filter((d) => d % 2 === 0) : days, y + 40, 0.5);
+        el(svg, "line", { class: "axis", x1: left, x2: right, y1: 100, y2: 100 });
+        // the answers: the prices of days 5 and 6
+        [5, 6].forEach((d) => el(svg, "path", { class: "tri", d: `M${cx(d) - 6},88 L${cx(d) + 6},88 L${cx(d)},97 Z` }));
+        el(svg, "text", { class: "t-note", x: (cx(5) + cx(6)) / 2, y: 140, "text-anchor": "middle" }, "▼ the answers: prices of days 5 and 6");
+        if (fixed) el(svg, "text", { class: "t-lab", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "dropped");
+        else el(svg, "text", { class: "t-lab leak-t", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "contain the answers");
       },
     },
 
     howmany: {
-      legend: { ok: "results looked at to pick the winner", late: "traded before the pick existed", mark: "traded, or reported" },
-      question: "Was the winner picked by looking at the same results it reports?",
-      variants: [
-        {
-          label: "Trade the winner on the same days",
-          trade: "early",
-          ok: false,
-          plain: "Leak: days 0 to 499 are traded with a pick that is only made after day 499.",
-          msg: "look-ahead bias: the position of row 1 uses what is known only at the open of row 500, but it must be decided by the close of row 0",
-          note: "Five strategies are tried on days 0 to 499 and the best is picked by looking at the results. That pick exists only from day 500, so trading it on days 0 to 499 uses the future.",
-        },
-        {
-          label: "Report it as best of 5",
-          trade: "report",
-          ok: true,
-          plain: "Accepted, graded in-sample (best of 5): the result is reported as one pick among five tries.",
-          note: "As a report on the days it was picked on, it's accepted, but graded as the best of 5 so a multiple-testing correction can use K = 5.",
-        },
-        {
-          label: "Trade the winner from day 501",
-          trade: "late",
-          ok: true,
-          plain: "Accepted, graded tradable: the winner is only traded after it was picked.",
-          note: "Traded only after the pick is made, it's an ordinary strategy that could have run live.",
-        },
-      ],
-      draw(v) {
-        const K = 5, win = 2;
-        const L = layout(0, 1000, K, { cell: 14, below: 48 });
-        for (let k = 0; k < K; k++) laneLabel(L, k, k === win ? "strategy 3, the winner" : `strategy ${k + 1}`, k === win ? "win" : `s${k + 1}`);
-        const barH = 10;
-        for (let k = 0; k < K; k++) {
-          const y = L.laneY(k) - barH / 2;
-          el(svg, "rect", { class: "track", x: L.x(0), y, width: L.x(1000) - L.x(0), height: barH, rx: 2 });
-          const g = el(svg, "g", { class: "seg seg-looked" });
-          el(g, "rect", { x: L.x(0), y, width: L.x(499) - L.x(0), height: barH, rx: 2 });
-          el(g, "title", {}, `strategy ${k + 1}: results on days 0 to 499 are looked at to pick the winner`);
-        }
-        const y = L.laneY(win) - barH / 2 - 3, h = barH + 6;
-        if (v.trade === "early") {
-          const g = el(svg, "g", { class: "seg seg-bad" });
-          el(g, "rect", { x: L.x(0), y, width: L.x(499) - L.x(0), height: h, rx: 3 });
-          el(g, "title", {}, "the winner, traded on days 0 to 499, before it was picked");
-        } else if (v.trade === "late") {
-          const g = el(svg, "g", { class: "seg seg-trade" });
-          el(g, "rect", { x: L.x(501), y, width: L.x(1000) - L.x(501), height: h, rx: 3 });
-          el(g, "title", {}, "the winner, traded from day 501, after it was picked");
+      bad: {
+        code: [
+          ["tries = {w: backtest(momentum(df, w), days=range(0, 500))", false],
+          ["         for w in (5, 10, 20, 40, 80)}   # try five settings", false],
+          ["best = max(tries, key=lambda w: tries[w].sharpe)  # pick one", false],
+          ["trade(momentum(df, best), days=range(0, 500))  # same days", true],
+        ],
+        verdict: "Rejected. Days 0 to 499 are traded with a winner that could only be picked after day 499.",
+        tool: "look-ahead bias: the position of row 1 uses what is known only at the open of row 500, but it must be decided by the close of row 0",
+      },
+      good: {
+        code: [
+          ["tries = {w: backtest(momentum(df, w), days=range(0, 500))", false],
+          ["         for w in (5, 10, 20, 40, 80)}   # try five settings", false],
+          ["best = max(tries, key=lambda w: tries[w].sharpe)  # pick one", false],
+          ["trade(momentum(df, best), days=range(501, 1000))  # afterwards", true],
+        ],
+        verdict: "Accepted, graded tradable. (Reporting the winner's score on days 0 to 499 is also accepted, but graded “best of 5”, so the luck of picking can be corrected for.)",
+      },
+      draw(fixed) {
+        const T = timeline([
+          { at: 0.5, label: "day 500", kind: "trade", note: "winner picked here" },
+        ], { start: "day 0", end: "day 1000" }, 196);
+        const x0 = T.x(0.03), x5 = T.x(0.5), x1 = T.x(0.97);
+        el(svg, "path", { class: "bracket", d: `M${x0},${T.axisY - 20} v-6 H${x5 - 4} v6` });
+        el(svg, "text", { class: "t-note", x: (x0 + x5) / 2, y: T.axisY - 32, "text-anchor": "middle" }, "5 settings tried, results compared");
+        const y = T.axisY + 66;
+        if (fixed) {
+          el(svg, "rect", { class: "blk", x: x5 + 4, y: y - 7, width: x1 - x5 - 4, height: 14 });
+          el(svg, "text", { class: "t-note", x: (x5 + x1) / 2, y: y + 24, "text-anchor": "middle" }, "traded after the pick");
         } else {
-          const g = el(svg, "g", { class: "seg seg-report" });
-          el(g, "rect", { x: L.x(0), y, width: L.x(499) - L.x(0), height: h, rx: 3 });
-          el(g, "title", {}, "the winner's result on days 0 to 499, reported as the best of 5");
+          el(svg, "rect", { class: "blk leak", x: x0, y: y - 7, width: x5 - x0 - 4, height: 14 });
+          el(svg, "text", { class: "t-note leak-t", x: (x0 + x5) / 2, y: y + 24, "text-anchor": "middle" }, "traded before the pick existed");
         }
-        moment(L, 500, L.narrow ? "pick" : "winner picked here");
-        const ay = L.lanesBottom + 4;
-        bracket(L, L.x(0), L.x(499), ay, "results looked at to pick the winner");
-        const ty = ay + 36;
-        [0, 500, 1000].forEach((d) => el(svg, "text", { class: "tick", x: L.x(d), y: ty, "text-anchor": d === 0 ? "start" : d === 1000 ? "end" : "middle" }, L.narrow ? d : `day ${d}`));
       },
     },
 
     whatkind: {
-      legend: { ok: "used, and already known", late: "used before it was known", future: "not yet known at the trade" },
-      question: "Does the value depend on something that is only fixed later?",
-      variants: [
-        {
-          label: "Buy when adjusted price < $60",
-          level: true,
-          ok: false,
-          plain: "Leak: an adjusted price depends on a factor fixed when the data was downloaded, years after the trade.",
-          msg: "look-ahead bias: the position of row 7 uses what is known only at the close of row 999, but it must be decided by the close of row 6",
-          note: "Adjusted price = printed price × a factor fixed at download. “Below $60” depends on that factor, so the signal is only known at the download.",
-        },
-        {
-          label: "Buy on adjusted-price momentum",
-          level: false,
-          ok: true,
-          plain: "Accepted, graded tradable: the factor cancels, so only printed prices are used.",
-          note: "Momentum divides today's adjusted close by yesterday's, and the factor cancels like a unit of measure. The signal is known as soon as the prices print.",
-        },
-      ],
-      draw(v) {
-        const days = [3, 4, 5, 6, 7];
-        const L = layout(3, 10.2, 2);
-        future(L, 7, L.narrow ? "not known yet" : "not yet known at the trade");
-        laneLabel(L, 0, "printed close", "close");
-        laneLabel(L, 1, "adjustment factor", "factor");
-        const used = v.level ? new Set([6]) : new Set([5, 6]);
-        for (const d of days) {
-          cell(L, L.x(d + 0.5), L.laneY(0), used.has(d) ? "ok" : "plain",
-            `printed close of day ${d}` + (used.has(d) ? ": used by the signal, known before the trade" : ""));
+      bad: {
+        code: [
+          ["px  = yf.download(\"XYZ\")[\"Adj Close\"]  # rescaled for later splits", false],
+          ["buy = px < 60                          # a price level", true],
+        ],
+        verdict: "Rejected. An adjusted price is rescaled for every split and dividend up to the download, so “below $60” in 2015 depends on events years later.",
+        tool: "look-ahead bias: the position of row 1 uses what is known only at the close of row 999, but it must be decided by the close of row 0",
+      },
+      good: {
+        code: [
+          ["px  = yf.download(\"XYZ\")[\"Adj Close\"]  # rescaled for later splits", false],
+          ["buy = px.pct_change(20) > 0            # a return: rescaling cancels", true],
+        ],
+        verdict: "Accepted, graded tradable. A return divides one adjusted price by another, so the later rescaling cancels out.",
+      },
+      draw(fixed) {
+        const T = timeline([
+          { at: 0.15, label: "2015", kind: "trade", note: fixed ? "buy if up over 20 days" : "buy if below $60" },
+          { at: 0.85, label: "2024", kind: "info", note: "downloaded: prices rescaled" },
+        ]);
+        if (fixed) {
+          const a = T.x(0.15), b = T.x(0.85), y = T.axisY - 40, mid = (a + b) / 2;
+          el(svg, "text", { class: "t-note", x: mid, y: y - 6, "text-anchor": "middle" }, "not needed: the rescaling cancels in a ratio");
+        } else {
+          arrow(T, 0.85, 0.15, true, "depends on events 9 years later");
         }
-        el(svg, "text", { class: "tick", x: L.x(8.55), y: L.laneY(0) + 4, "text-anchor": "middle" }, L.narrow ? "…" : "… years …");
-        const fx = L.x(9.6);
-        cell(L, fx, L.laneY(1), v.level ? "late" : "void",
-          v.level ? "adjustment factor, fixed at download: used before it is known" : "adjustment factor: cancels in a return, so not used");
-        if (!v.level) el(svg, "line", { class: "strike", x1: fx - L.cell / 2 - 3, x2: fx + L.cell / 2 + 3, y1: L.laneY(1) + L.cell / 2 + 3, y2: L.laneY(1) - L.cell / 2 - 3 });
-        moment(L, 7, L.narrow ? "trade, day 7" : "trade: open of day 7");
-        const y = L.lanesBottom + 4;
-        const xa = L.x((v.level ? 6.5 : 5.5)) - L.cell / 2;
-        bracket(L, xa, (v.level ? fx : L.x(6.5)) + L.cell / 2, y,
-          v.level ? "the signal uses this close and the factor" : "the signal uses two printed closes", v.ok ? "" : "bad");
-        dayAxis(L, days, y + 40);
-        el(svg, "text", { class: "tick", x: fx, y: y + 40, "text-anchor": "middle" }, L.narrow ? "dl." : "download");
       },
     },
   };
 
-  let current = "when";
-  let variant = 0;
-
-  function renderVariants() {
-    variantsBox.querySelectorAll("label").forEach((n) => n.remove());
-    CASES[current].variants.forEach((v, i) => {
-      const lab = document.createElement("label");
-      const input = document.createElement("input");
-      input.type = "radio";
-      input.name = "variant";
-      input.value = i;
-      input.checked = i === variant;
-      input.addEventListener("change", () => { variant = i; render(); });
-      const span = document.createElement("span");
-      span.textContent = v.label;
-      lab.append(input, span);
-      variantsBox.appendChild(lab);
-    });
+  // ---- drawing helpers -----------------------------------------------------
+  function size() { return Math.max(280, svg.parentElement.clientWidth); }
+  function setBox(W, H) {
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("height", H);
   }
+
+  // A horizontal time axis with labelled events. kind "trade" draws a flag,
+  // kind "info" draws a dot for data the strategy uses.
+  function timeline(events, ends, height) {
+    const W = size(), H = height || (W < 520 ? 178 : 160);
+    setBox(W, H);
+    const L = 14, R = W - 14, axisY = 86;
+    const x = (f) => L + f * (R - L);
+    el(svg, "line", { class: "axis", x1: L, x2: R, y1: axisY, y2: axisY });
+    el(svg, "path", { class: "axis-head", d: `M${R},${axisY} l-8,-5 v10 z` });
+    el(svg, "text", { class: "t-tick", x: R, y: axisY + 18, "text-anchor": "end" }, "time");
+    if (ends) {
+      el(svg, "text", { class: "t-tick", x: x(0.03), y: axisY + 18, "text-anchor": "middle" }, ends.start);
+      el(svg, "text", { class: "t-tick", x: x(0.97), y: axisY + 34, "text-anchor": "middle" }, ends.end);
+    }
+    const groups = [];
+    for (const e of events) {
+      const ex = x(e.at);
+      if (e.kind === "trade") {
+        el(svg, "line", { class: "flag-pole", x1: ex, x2: ex, y1: axisY, y2: axisY - 26 });
+        el(svg, "path", { class: "flag", d: `M${ex},${axisY - 26} h12 l-4,5 l4,5 h-12 z` });
+      } else {
+        el(svg, "circle", { class: "dot", cx: ex, cy: axisY, r: 6 });
+      }
+      const label = el(svg, "text", { class: "t-lab", x: ex, y: axisY + 18, "text-anchor": anchorFor(e.at) }, e.label);
+      const note = el(svg, "text", { class: "t-note", x: ex, y: axisY + 34, "text-anchor": anchorFor(e.at) }, e.note);
+      groups.push([label, note]);
+    }
+    // On narrow screens, drop an event's label and note below the previous
+    // event's if their text would overlap.
+    const span = (g) => {
+      const a = g[0].getBBox(), b = g[1].getBBox();
+      return [Math.min(a.x, b.x), Math.max(a.x + a.width, b.x + b.width)];
+    };
+    for (let i = 1; i < groups.length; i++) {
+      const [a0, a1] = span(groups[i - 1]), [b0, b1] = span(groups[i]);
+      if (a1 + 8 > b0 && b1 + 8 > a0) {
+        groups[i][0].setAttribute("y", axisY + 52);
+        groups[i][1].setAttribute("y", axisY + 68);
+      }
+    }
+    return { W, H, x, axisY };
+  }
+  function anchorFor(f) { return f < 0.3 ? "start" : f > 0.7 ? "end" : "middle"; }
+
+  // A curved arrow from the time the information exists to the time it's used.
+  function arrow(T, fromF, toF, leak, label) {
+    const a = T.x(fromF), b = T.x(toF), y = T.axisY - 12, mid = (a + b) / 2, lift = 44;
+    const cls = leak ? "arrow leak" : "arrow";
+    el(svg, "path", { class: cls, d: `M${a},${y} Q${mid},${y - lift} ${b + (b < a ? 8 : -8)},${y}` });
+    const dir = b < a ? 1 : -1;
+    el(svg, "path", { class: cls + " head", d: `M${b},${y + 2} l${dir * 9},-10 l${dir * 3},9 z` });
+    el(svg, "text", { class: "t-note" + (leak ? " leak-t" : ""), x: mid, y: y - lift / 2 - 6, "text-anchor": "middle" }, label);
+  }
+
+  // ---- state -----------------------------------------------------------------
+  let current = "when";
 
   function render() {
     const c = CASES[current];
-    const v = c.variants[variant];
-    questionEl.textContent = c.question;
-    legendItems.forEach((item) => {
-      const text = c.legend[item.dataset.key];
-      item.hidden = !text;
-      if (text) item.querySelector("b").textContent = text;
+    const fixed = fixEl.checked;
+    const v = fixed ? c.good : c.bad;
+    codeEl.replaceChildren();
+    v.code.forEach(([text, hl]) => {
+      const line = document.createElement("span");
+      line.className = "code-line" + (hl ? (fixed ? " hl-ok" : " hl-bad") : "");
+      line.textContent = text;
+      codeEl.appendChild(line);
     });
-    c.draw(v);
-    verdictEl.className = "verdict " + (v.ok ? "is-ok" : "is-bad");
-    verdictEl.replaceChildren();
-    const head = document.createElement("p");
-    head.className = "v-head";
-    const icon = document.createElement("span");
-    icon.className = "v-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = v.ok ? "✓" : "✕";
-    const status = document.createElement("span");
-    status.textContent = v.plain;
-    head.append(icon, status);
-    verdictEl.appendChild(head);
-    if (v.msg) {
-      const p = document.createElement("p");
-      p.className = "v-msg";
+    svg.replaceChildren();
+    c.draw(fixed);
+    alertEl.className = "alert " + (fixed ? "is-ok" : "is-bad");
+    iconEl.textContent = fixed ? "✓" : "!";
+    verdictEl.textContent = v.verdict;
+    toolEl.textContent = "";
+    if (v.tool) {
       const lab = document.createElement("span");
-      lab.textContent = "What leakproof prints (rows are trading days):";
+      lab.textContent = "leakproof's message, from its own example (rows are days): ";
       const code = document.createElement("code");
-      code.textContent = v.msg;
-      p.append(lab, code);
-      verdictEl.appendChild(p);
+      code.textContent = v.tool;
+      toolEl.append(lab, code);
     }
-    noteEl.textContent = v.note;
   }
 
   function select(tab, focus) {
@@ -370,10 +265,10 @@
       t.setAttribute("aria-selected", on);
       t.tabIndex = on ? 0 : -1;
     });
+    panel.setAttribute("aria-labelledby", tab.id);
     if (focus) tab.focus();
-    current = tab.dataset.q;
-    variant = 0;
-    renderVariants();
+    current = tab.dataset.case;
+    fixEl.checked = false;
     render();
   }
 
@@ -382,16 +277,15 @@
     tab.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
       e.preventDefault();
-      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
-      select(next, true);
+      select(tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length], true);
     });
   });
+  fixEl.addEventListener("change", render);
 
   let lastW = svg.parentElement.clientWidth;
   window.addEventListener("resize", () => {
     const w = svg.parentElement.clientWidth;
     if (Math.abs(w - lastW) > 4) { lastW = w; render(); }
   });
-  renderVariants();
   render();
 })();
