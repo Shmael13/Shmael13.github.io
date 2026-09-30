@@ -1,0 +1,41 @@
+{
+ "source": "Comp559/Simulation Layer/logs/experiment_regulation.jsonl",
+ "edges": [
+  {
+   "from": "libertarian",
+   "to": "regulator",
+   "messages": 40,
+   "mean_nli": 0.8429
+  },
+  {
+   "from": "pragmatist",
+   "to": "regulator",
+   "messages": 41,
+   "mean_nli": 0.8776
+  },
+  {
+   "from": "regulator",
+   "to": "libertarian",
+   "messages": 40,
+   "mean_nli": 0.6754
+  },
+  {
+   "from": "regulator",
+   "to": "pragmatist",
+   "messages": 40,
+   "mean_nli": 0.5926
+  },
+  {
+   "from": "regulator",
+   "to": "skeptic",
+   "messages": 40,
+   "mean_nli": 0.522
+  },
+  {
+   "from": "skeptic",
+   "to": "regulator",
+   "messages": 40,
+   "mean_nli": 0.7936
+  }
+ ]
+}

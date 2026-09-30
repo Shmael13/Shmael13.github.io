@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ismail Syed</title>
+<meta name="description" content="Ismail Syed builds tools and simulations for quantitative research and machine learning.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=STIX+Two+Text:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#work">Skip to projects</a>
+
+<header class="site-header wrap">
+  <a class="name" href="#top">Ismail Syed</a>
+  <nav aria-label="Sections">
+    <a href="#work">Work</a>
+    <a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero wrap">
+    <h1>I build tools and simulations for quantitative research and machine learning.</h1>
+    <p class="lede">Most recently, <a href="#leakproof">leakproof</a>: it asks of every backtest or forecast result what data that number has seen, and answers from the program text without looking at the data. Below are its four questions, each on a real case, as written and corrected.</p>
+
+    <figure class="lab" aria-labelledby="lab-question">
+      <div class="lab-controls">
+        <div class="tabs" role="tablist" aria-label="Question">
+          <button role="tab" id="tab-when" aria-selected="true" data-q="when">When</button>
+          <button role="tab" id="tab-which" aria-selected="false" data-q="which" tabindex="-1">Which</button>
+          <button role="tab" id="tab-howmany" aria-selected="false" data-q="howmany" tabindex="-1">How many</button>
+          <button role="tab" id="tab-whatkind" aria-selected="false" data-q="whatkind" tabindex="-1">What kind</button>
+        </div>
+        <fieldset class="variants" id="lab-variants">
+          <legend class="visually-hidden">Version of the program</legend>
+        </fieldset>
+      </div>
+      <p class="lab-question" id="lab-question"></p>
+      <svg id="lab-svg" role="img" aria-labelledby="lab-question lab-verdict"></svg>
+      <div class="lab-legend" aria-hidden="true">
+        <span><i class="sw sw-ok"></i>read, known in time</span>
+        <span><i class="sw sw-late"></i>read, known too late</span>
+        <span><i class="sw sw-mark"></i>where it trades or is scored</span>
+      </div>
+      <div class="verdict" id="lab-verdict" aria-live="polite"></div>
+      <figcaption class="lab-note" id="lab-note"></figcaption>
+      <noscript><p class="lab-note">This demo needs JavaScript. In short: leakproof works out which data cells every value was computed from, then checks four things from that footprint alone: whether it was known before the trade, whether a forecast read its own outcome, how many tries a result was picked from, and whether it depends on a price adjustment made later.</p></noscript>
+    </figure>
+  </section>
+
+  <section id="work" class="work wrap" aria-labelledby="work-h">
+    <h2 id="work-h">Selected work</h2>
+
+    <h3 class="track">Quantitative finance</h3>
+    <ul class="projects">
+      <li class="project" id="leakproof">
+        <div class="context">Independent research<br>2026</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/leakproof">leakproof</a></h4>
+          <p>A backtest can run without a fault and still report a number that depends on something it must not. leakproof works out each value's footprint, the data cells it was computed from, from the program text alone. Four readings of that footprint catch look-ahead bias, a forecast scored on its own outcome, a result picked as the best of many tries, and prices adjusted in hindsight.</p>
+          <p>Every result is graded tradable, out-of-sample, or in-sample best of K, and lists what it took on trust. It also gets a certificate that anyone can re-check without the data. The guarantees are machine-checked in Rocq with no axioms. It comes as a small strategy language, a pandas-like Python library, and an analysis of unmodified pandas scripts.</p>
+          <p class="result">On a benchmark of <b>78</b> leaks, it rejects all 78 and accepts all 89 corrections. Replaying the strategy with the future hidden, the strongest alternative, never detects 10 of them: their hindsight sits in a constant fitted on the whole sample, a lookup table, a choice made by reading results, or a price adjustment.</p>
+          <div class="meta"><span>Python, pandas, Rocq</span><a href="https://github.com/Shmael13/leakproof">Code</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:leakproof-->
+          <figcaption>Leaks detected out of 78 on the benchmark's synthetic market. Replay at 25 rows is the expected count when the strategy is re-run at 25 random rows.</figcaption>
+        </figure>
+      </li>
+      <li class="project">
+        <div class="context">Personal project<br>2025</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/MyProjects/tree/main/Economic_Models/Multi_Agent_Market_Simulation">Multi-agent market simulation</a></h4>
+          <p>A tick-based stock exchange in C++ where autonomous agents trade through per-stock limit order books with market orders, limit orders and partial fills. Strategies can be written in C++ or in Python through an embedded interpreter, from trend-following to an LSTM price predictor.</p>
+          <p class="result">Matching crosses the best bid and ask from price-priority heaps and sets each tick's price to the volume-weighted fill price. Order books run in parallel across stocks with OpenMP, and shares and cash are conserved on every tick.</p>
+          <div class="meta"><span>C++23, CMake, OpenMP, pybind11, Python</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Economic_Models/Multi_Agent_Market_Simulation">Code</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:market-->
+          <figcaption>Price discovery in one 300-tick run with 202 agents: 160 C++ traders and 42 Python ones, two of them LSTM traders.</figcaption>
+        </figure>
+      </li>
+    </ul>
+
+    <h3 class="track">Machine learning</h3>
+    <ul class="projects">
+      <li class="project">
+        <div class="context">Rice COMP 559<br>with Victoria Liu<br>2026</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/Comp559">Sentiment dynamics on LLM agent graphs</a></h4>
+          <p>An async simulator that runs LLM agents over a directed graph, scores every message for agreement with an NLI cross-encoder, and folds the score into signed edge weights. We used it to test whether structural balance theory holds for LLM triads.</p>
+          <p class="result">In an 80-round, four-agent debate on a fully connected graph, all 241 messages flowed through just <b>6 of 12</b> possible edges, every one touching the same agent.</p>
+          <div class="meta"><span>Python, asyncio, Hugging Face Transformers, NetworkX, Ollama</span><a href="https://github.com/Shmael13/Comp559">Code</a><a href="https://github.com/Shmael13/Comp559/blob/main/Report%20-%20Final%20Up%20to%20Date/Final%20-%20COMP_559_Project.pdf">Report</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:comp559-->
+          <figcaption>Who talked to whom. Each arrow carried 40 or 41 messages; the three outer agents never messaged each other.</figcaption>
+        </figure>
+      </li>
+      <li class="project">
+        <div class="context">Rice COMP 584<br>2026</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/COMP584">Emergent communication with hierarchical transformers</a></h4>
+          <p>A sender and a receiver, built from the byte encoder, word backbone and byte decoder of hierarchical autoregressive transformers, invent their own byte-level language to pick out objects. They are trained end to end with straight-through Gumbel-softmax, and the resulting language is measured for compositionality and Zipf-like statistics.</p>
+          <p class="result"><b>97%</b> accuracy on held-out objects when choosing among 8 candidates, where chance is 12.5%.</p>
+          <div class="meta"><span>Python, PyTorch</span><a href="https://github.com/Shmael13/COMP584">Code</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:comp584-->
+          <figcaption>The 20,000-step training run. Held-out accuracy peaks at step 5,500, then drifts down as the agents overfit.</figcaption>
+        </figure>
+      </li>
+      <li class="project">
+        <div class="context">ELEC 537<br>2025</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/Elec537Project">Activity recognition from accelerometer data</a></h4>
+          <p>Classifies one-second windows of 50 Hz, 3-axis accelerometer data as moving or sleeping, comparing classical models on hand-built window features against 1D CNN, LSTM and GRU models on the raw sequences.</p>
+          <p class="result">A scaled kNN on 14 window features reached <b>93%</b> on held-out recordings, ahead of every deep model (71&ndash;82%) with only nine recordings to train on. The whole comparison reproduces exactly from a fixed seed.</p>
+          <div class="meta"><span>Python, scikit-learn, TensorFlow/Keras</span><a href="https://github.com/Shmael13/Elec537Project">Code</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:elec537-->
+          <figcaption>Accuracy on 91 windows from four recordings the models never saw.</figcaption>
+        </figure>
+      </li>
+      <li class="project">
+        <div class="context">Self-study<br>2025</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/ML_Projects">Machine learning from first principles</a></h4>
+          <p>Thirteen notebooks covering core supervised and unsupervised learning: linear and logistic regression, KNN, a reusable single-neuron class, a backpropagation MLP, tree ensembles, k-means, PCA and SVD image compression. The neural models, KNN and k-means are written from scratch in NumPy; the tree ensembles and PCA use scikit-learn.</p>
+          <div class="meta"><span>Python, NumPy, pandas, scikit-learn, Jupyter</span><a href="https://github.com/Shmael13/ML_Projects">Code</a></div>
+        </div>
+        <figure class="fig">
+          <div class="svd-grid">
+            <div><img src="img/svd-k2.webp" width="480" height="271" alt="Rank 2 reconstruction: only a blur of red and green"><span>Rank 2, 0.8% of the numbers</span></div>
+            <div><img src="img/svd-k10.webp" width="480" height="271" alt="Rank 10 reconstruction: the car's outline appears, blocky"><span>Rank 10, 3.8%</span></div>
+            <div><img src="img/svd-k40.webp" width="480" height="271" alt="Rank 40 reconstruction: close to the original, slightly grainy"><span>Rank 40, 15%</span></div>
+            <div><img src="img/svd-full.webp" width="480" height="271" alt="The original image: a green toy car on a red cloth"><span>Original, rank 408</span></div>
+          </div>
+          <figcaption>From the SVD notebook: the same image rebuilt from its top singular values, per colour channel.</figcaption>
+        </figure>
+      </li>
+    </ul>
+
+    <h3 class="track">Systems and simulation</h3>
+    <ul class="projects">
+      <li class="project">
+        <div class="context">Personal project<br>2025</div>
+        <div class="body">
+          <h4><a href="https://github.com/Shmael13/MyProjects/tree/main/Particle_Simulator/Clusters">Particle life simulator</a></h4>
+          <p>A real-time artificial-life simulation in C where 800 particles of 8 types self-organize into cell-like clusters under randomly generated attraction and repulsion rules, rendered live with Allegro 5.</p>
+          <p class="result">Each frame, particles are binned into a 14&times;14 spatial grid with a counting sort, and forces are computed per cell over its 3&times;3 neighbourhood in parallel with OpenMP. Results are identical on 1 thread or 8.</p>
+          <div class="meta"><span>C, OpenMP, Allegro 5</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Particle_Simulator/Clusters">Code</a></div>
+        </div>
+        <figure class="fig">
+          <!--FIG:particles-->
+          <figcaption>All 800 particles after 900 frames, from the simulator's own code run headless. Colour is particle type.</figcaption>
+        </figure>
+      </li>
+    </ul>
+  </section>
+
+  <section id="about" class="about wrap" aria-labelledby="about-h">
+    <h2 id="about-h">About</h2>
+    <p>I'm a computer science student at Rice University. Most of my work sits where quantitative finance meets machine learning: market microstructure, simulation, and checking that a model's results hold up outside the data it was built on.</p>
+    <p>I write mostly Python and C/C++, and I care about both correctness and speed. The projects above include a type system with machine-checked proofs, an order-matching engine, a particle simulation parallelized with OpenMP, and several ML experiments I reproduced and measured myself.</p>
+  </section>
+
+  <section id="contact" class="contact wrap" aria-labelledby="contact-h">
+    <h2 id="contact-h">Contact</h2>
+    <p>I'm looking for roles in quantitative research, quant development, and machine learning engineering. The fastest way to reach me is email.</p>
+    <ul class="contact-links">
+      <li><a href="mailto:ismailsyed2005@gmail.com">ismailsyed2005@gmail.com</a></li>
+      <li><a href="https://www.linkedin.com/in/ismail-syed-awesome">LinkedIn</a></li>
+      <li><a href="https://github.com/Shmael13">GitHub</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="wrap site-footer">
+  <p>Built by hand as a static page. Every figure is drawn from the project's own data. <a href="https://github.com/Shmael13/Shmael13.github.io">Source</a></p>
+</footer>
+
+<script src="lab.js"></script>
+</body>
+</html>
