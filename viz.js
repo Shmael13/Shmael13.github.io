@@ -489,6 +489,18 @@
     order.forEach((k) => why.append(html("div", { class: "y-row" }, html("span", { text: K[k].label }), side(K[k].buy_vs, true), side(K[k].sell_vs, false))));
     root.append(why);
     root.append(html("p", { class: "viz-note", text: "ALWAYS BUYS HAS NO SUCH EDGE: IT SPENT ALL ITS CASH ON SHARES IN THE FIRST ROUNDS, AT ABOUT $10, AND RODE THE PRICE UP. HIGH BIDDER KEEPS OFFERING $40 FOR SHARES WORTH FAR LESS. THE SIMULATOR ISN'T SEEDED, SO THE NUMBERS CHANGE FROM RUN TO RUN, BUT IN A SECOND RUN THE COIN FLIP AGAIN CAME FIRST AND RANDOM ORDERS LAST." }));
+    // why the neural network doesn't win: it gets no price edge, barely trades,
+    // and the price has almost no pattern to learn
+    const nn = K.find((k) => k.id === "LiveNN_trader"), nnIdx = K.indexOf(nn);
+    const change = price.map((v, k) => v - (k ? price[k - 1] : M.start.price)).slice(1);
+    const avg = change.reduce((t, v) => t + v, 0) / change.length;
+    let num = 0, den = 0;
+    change.forEach((v, k) => { den += (v - avg) * (v - avg); if (k) num += (v - avg) * (change[k - 1] - avg); });
+    const signed = (v) => (v >= 0 ? "+" : "\u2212") + Math.abs(v).toFixed(1) + "%";
+    const perCoin = Math.round((coin.bought + coin.sold) / coin.n / 10) * 10;
+    root.append(html("p", { class: "viz-read board-head", text: "WHY DOESN'T THE NEURAL NETWORK WIN?" }));
+    root.append(html("p", { class: "viz-note why", text:
+      `THIS MARKET DOESN'T REWARD PREDICTION. THE WINNERS PROFIT FROM THE PRICES THEY GET, AND THE NEURAL NETWORK'S ONE-SHARE ORDERS WERE FILLED AT ${nn.buy_vs === 0 && nn.sell_vs === 0 ? "EXACTLY THE GOING PRICE" : "CLOSE TO THE GOING PRICE"}. IT ALSO BARELY TRADES: IT SPENDS THE FIRST ${M.nn.wait_rounds} OF ${n} ROUNDS COLLECTING TRAINING DATA, THEN TRADES ONE SHARE AT A TIME, ${nn.bought + nn.sold} SHARES IN ALL AGAINST ABOUT ${perCoin.toLocaleString("en-US")} FOR EACH COIN-FLIP TRADER. AND THERE IS LITTLE TO PREDICT: WITH MOSTLY RANDOM TRADERS, ONE ROUND'S PRICE CHANGE IS ALMOST UNRELATED TO THE LAST (CORRELATION ${(num / den).toFixed(2)}), AND IT LEARNS FROM ONLY ${M.nn.train_examples} EXAMPLES. ITS RESULT IS NOISE AROUND ZERO: ${signed(gain(nnIdx, n - 1))} IN THIS RUN, ${signed(M.other_run.nn)} IN ANOTHER.` }));
     root.append(html("p", { class: "viz-note audit", text: `AUDIT ✓ ${M.audit.shares.toLocaleString("en-US")} SHARES AND $${M.audit.cash.toLocaleString("en-US")} IN CASH EXIST BEFORE THE FIRST ROUND AND AFTER EVERY ONE OF THE ${n}. TRADING ONLY MOVES THEM BETWEEN TRADERS, SO THE WINNERS' GAINS ABOVE ARE EXACTLY THE LOSERS' LOSSES.` }));
 
     let i = 0, timer = null;
