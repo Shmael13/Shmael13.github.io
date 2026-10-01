@@ -89,6 +89,7 @@
       note.textContent = !triad
         ? "What the log shows: the critics start out arguing and end up repeating the regulator. By round 60 all three send it the same sentence. A high score means a reply restates the message it answers, which is not always the same as being persuaded."
         : "What the experiments found: scores drift mildly positive even between pairs told to be enemies. Partly the chatbots smooth things over, and partly the simple tone scorer misses sarcasm, as some log lines show.";
+      headline(triad);
 
       svg.replaceChildren();
       edges = {};
@@ -135,6 +136,36 @@
       });
       pulses = svgEl(svg, "g", {});
       reset();
+    }
+
+    // The headline number beside the figure follows the experiment being shown.
+    const card = root.closest("article");
+    const head = card && { amount: card.querySelector(".amount"), what: card.querySelector(".what"), from: card.querySelector(".from") };
+    function headline(triad) {
+      if (!head || !head.amount || !head.what || !head.from) return;
+      const M = E.messages;
+      let big, small, what, from;
+      if (!triad) {
+        const agree = (a, b) => {
+          const v = M.filter((m) => m[0] >= a && m[0] <= b);
+          return Math.round((100 * v.filter((m) => kind(m[3]) === "agree").length) / v.length);
+        };
+        big = agree(1, 10) + "%"; small = "TO " + agree(31, 60) + "%";
+        what = "of replies scored as agreeing with the message they answer, in rounds 1\u201310 versus rounds 31\u201360 of the debate. The libertarian opens with \u201cGlobal regulation of AI would stifle innovation\u201d and by round 60 writes \u201cExactly; without enforceable global treaties\u2026\u201d";
+        from = `the debate\u2019s ${M.length}-message log, scored by an NLI model. A high score means a reply restates what it answers`;
+      } else {
+        const sign = {};
+        E.seeded.forEach(([a, b, sg]) => { sign[pairKey(a, b)] = sg; });
+        const mean = (sg) => { const v = M.filter((m) => sign[pairKey(m[1], m[2])] === sg); return v.reduce((t, m) => t + m[3], 0) / v.length; };
+        const enemies = E.seeded.filter((p) => p[2] < 0).length, friends = E.seeded.length - enemies;
+        const foe = mean(-1), pal = mean(1);
+        big = fmt(foe); small = "VS " + fmt(pal);
+        what = `average tone between the ${enemies > 1 ? "pairs" : "pair"} told to be enemies, against ${fmt(pal)} between the ${friends > 1 ? "pairs" : "pair"} told to be friends, as three chatbots discuss \u201c${E.topic}\u201d On a scale from \u22121 (hostile) to +1 (friendly)${foe > 0 ? ", even the enemies come out mildly positive" : ", the enemies come out negative"}.`;
+        from = `this run\u2019s ${M.length}-message log, scored for tone with TextBlob, which misses sarcasm`;
+      }
+      head.amount.replaceChildren(big + " ", html("small", { text: small }));
+      head.what.textContent = what;
+      head.from.replaceChildren(html("span", { text: "computed from" }), " " + from);
     }
 
     function land(m) {
