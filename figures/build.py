@@ -85,7 +85,7 @@ def nice_ticks(lo, hi, n=3):
 
 
 def fig_market():
-    prices = json.load(open(os.path.join(HERE, "market_prices.json")))["prices"]
+    prices = [t[0] for t in json.load(open(os.path.join(HERE, "market_run.json")))["ticks"]]
     h = 180
     L, R, T, B = 30, 44, 10, 22
     yt = nice_ticks(min(prices), max(prices))
@@ -265,7 +265,7 @@ DATA_FILES = {
     "debate": "comp559_replay.json",
     "words": "comp584_words.json",
     "traces": "elec537_traces.json",
-    "market": "market_prices.json",
+    "market": "market_run.json",
     "svd": "svd_ranks.json",
 }
 

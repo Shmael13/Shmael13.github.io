@@ -47,14 +47,16 @@
     });
   }
 
-  // ---------------------------------------------------------------- the debate
+  // ---------------------------------------------------------------- LLM agent conversations
+  // One 4-agent debate and five 3-agent "triad" experiments, replayed from the logs.
   mount("debate", (root) => {
-    const { agents, messages, topic } = DATA.debate;
-    const pos = [[180, 118], [58, 42], [302, 42], [180, 206]]; // regulator in the middle
-    const lastRound = messages[messages.length - 1][0];
-
-    root.append(html("p", { class: "viz-explain", text: `Four AI chatbots argue: “${topic}” Every message is scored from −1 (disagrees with what it answers) to +1 (agrees). Watch who ends up talking to whom.` }));
-    const svg = svgEl(null, "svg", { class: "debate-svg", viewBox: "0 0 360 252", role: "img", "aria-label": "Replay of the debate: messages travel between the four agents" });
+    const exps = DATA.debate.experiments;
+    const pick = html("select", { "aria-label": "Experiment" });
+    exps.forEach((e, k) => pick.append(html("option", { value: k, text: e.title })));
+    root.append(html("label", { class: "viz-pick" }, "EXPERIMENT ", pick));
+    const explain = html("p", { class: "viz-explain" });
+    root.append(explain);
+    const svg = svgEl(null, "svg", { class: "debate-svg", viewBox: "0 0 360 252", role: "img", "aria-label": "Replay of the conversation: messages travel between the agents" });
     root.append(svg);
     const log = html("pre", { class: "term-log", "aria-live": "off" });
     root.append(log);
@@ -62,65 +64,106 @@
     const again = html("button", { class: "viz-btn", type: "button", text: "[ RESTART ]" });
     const counter = html("span", { class: "viz-read" });
     root.append(html("div", { class: "viz-bar" }, btn, again, counter));
-    root.append(html("p", { class: "viz-key" },
-      html("span", { class: "k-agree", text: "● agrees" }), html("span", { class: "k-neutral", text: "● neutral" }), html("span", { class: "k-dis", text: "✕ disagrees" })));
+    const keyGood = html("span", { class: "k-agree" }), keyBad = html("span", { class: "k-dis" });
+    root.append(html("p", { class: "viz-key" }, keyGood, html("span", { class: "k-neutral", text: "● neutral" }), keyBad));
+    const note = html("p", { class: "viz-note" });
+    root.append(note);
 
-    // every ordered pair of agents is a possible edge
-    const edges = {};
-    for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) {
-      if (a === b) continue;
-      const [x1, y1] = pos[a], [x2, y2] = pos[b];
-      const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
-      const sx = x1 + ux * 12, sy = y1 + uy * 12, ex = x2 - ux * 12, ey = y2 - uy * 12;
-      const mx = (sx + ex) / 2 - uy * 9, my = (sy + ey) / 2 + ux * 9;
-      const path = svgEl(svg, "path", { class: "d-edge", d: `M${sx.toFixed(1)},${sy.toFixed(1)}Q${mx.toFixed(1)},${my.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}` });
-      edges[a + "-" + b] = { path, n: 0, sum: 0, len: path.getTotalLength() };
-    }
-    const labels = agents.map((name, i) => {
-      const [x, y] = pos[i];
-      svgEl(svg, "circle", { class: i === 0 ? "d-node hub" : "d-node", cx: x, cy: y, r: 8 });
-      const t = svgEl(svg, "text", { class: "d-name", x: i === 0 ? x + 14 : x, y: i === 0 ? y + 5 : (y < 100 ? y - 14 : y + 24), "text-anchor": i === 0 ? "start" : "middle" }, name);
-      const c = svgEl(svg, "text", { class: "d-count", x: i === 0 ? x + 14 : x, y: i === 0 ? y + 21 : (y < 100 ? y - 28 : y + 38), "text-anchor": i === 0 ? "start" : "middle" }, "");
-      return { t, c, sent: 0, got: 0 };
-    });
-    const pulses = svgEl(svg, "g", {});
-
-    let i = 0, timer = null, raf = null, live = [];
-    const kind = (s) => (s >= 0.33 ? "agree" : s <= -0.33 ? "dis" : "neutral");
+    let E, edges, labels, pairs, pulses, cut, i = 0, timer = null, raf = null, live = [];
+    const kind = (s) => (s >= cut ? "agree" : s <= -cut ? "dis" : "neutral");
     const fmt = (s) => (s >= 0 ? "+" : "−") + Math.abs(s).toFixed(2);
+    const pairKey = (a, b) => Math.min(a, b) + "-" + Math.max(a, b);
+
+    function setup(k) {
+      clearInterval(timer); timer = null; cancelAnimationFrame(raf); raf = null; live = [];
+      E = exps[k];
+      const triad = E.agents.length === 3;
+      cut = E.scorer === "NLI" ? 0.33 : 0.1; // TextBlob polarity runs much closer to zero
+      const pos = triad ? [[180, 48], [100, 190], [260, 190]] : [[180, 118], [58, 42], [302, 42], [180, 206]];
+      const cx = pos.reduce((s, p) => s + p[0], 0) / pos.length, cy = pos.reduce((s, p) => s + p[1], 0) / pos.length;
+      explain.textContent = triad
+        ? `Balance theory says “my friend’s enemy is my enemy”. Three chatbots are told who their friends and enemies are (${E.kind === "balanced" ? "two allies against one outsider, a stable set-up" : "one is friends with two who dislike each other, a tense set-up"}), then discuss: “${E.topic}” Each message’s tone is scored from −1 (hostile) to +1 (friendly).`
+        : `Four AI chatbots argue: “${E.topic}” Every message is scored from −1 (disagrees with what it answers) to +1 (agrees). Watch who ends up talking to whom.`;
+      keyGood.textContent = triad ? "● friendly" : "● agrees";
+      keyBad.textContent = triad ? "✕ hostile" : "✕ disagrees";
+      note.textContent = triad ? "What the experiments found: scores drift mildly positive even between pairs told to be enemies. Partly the chatbots smooth things over, and partly the simple tone scorer misses sarcasm, as some log lines show." : "";
+
+      svg.replaceChildren();
+      edges = {};
+      const n = E.agents.length;
+      for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) {
+        if (a === b) continue;
+        const [x1, y1] = pos[a], [x2, y2] = pos[b];
+        const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+        const sx = x1 + ux * 12, sy = y1 + uy * 12, ex = x2 - ux * 12, ey = y2 - uy * 12;
+        const mx = (sx + ex) / 2 - uy * 9, my = (sy + ey) / 2 + ux * 9;
+        const path = svgEl(svg, "path", { class: "d-edge", d: `M${sx.toFixed(1)},${sy.toFixed(1)}Q${mx.toFixed(1)},${my.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}` });
+        edges[a + "-" + b] = { path, n: 0, sum: 0, len: path.getTotalLength() };
+      }
+      // in the triads, each pair shows what it was told to be and its tone so far
+      pairs = {};
+      E.seeded.forEach(([a, b, sign]) => {
+        const mx = (pos[a][0] + pos[b][0]) / 2, my = (pos[a][1] + pos[b][1]) / 2;
+        const ox = mx - cx, oy = my - cy, ol = Math.hypot(ox, oy) || 1;
+        // side edges get their label outside the triangle; the bottom edge below it
+        const side = Math.abs(ox) > 5;
+        const anchor = !side ? "middle" : ox < 0 ? "end" : "start";
+        const x = side ? mx + Math.sign(ox) * 14 : mx, y = side ? my - 4 : my + 24;
+        svgEl(svg, "text", { class: "d-told", x, y, "text-anchor": anchor }, sign > 0 ? "told: friends" : "told: enemies");
+        const tone = svgEl(svg, "text", { class: "d-count", x, y: y + 15, "text-anchor": anchor }, "");
+        pairs[pairKey(a, b)] = { sign, tone, n: 0, sum: 0 };
+      });
+      labels = E.agents.map((name, k2) => {
+        const [x, y] = pos[k2];
+        const hub = !triad && k2 === 0, top = y < 100;
+        svgEl(svg, "circle", { class: hub ? "d-node hub" : "d-node", cx: x, cy: y, r: 8 });
+        svgEl(svg, "text", { class: "d-name", x: hub ? x + 14 : x, y: hub ? y + 5 : (top ? y - 14 : y + 24), "text-anchor": hub ? "start" : "middle" }, name);
+        const c = triad ? null : svgEl(svg, "text", { class: "d-count", x: hub ? x + 14 : x, y: hub ? y + 21 : (top ? y - 28 : y + 38), "text-anchor": hub ? "start" : "middle" }, "");
+        return { c, sent: 0, got: 0 };
+      });
+      pulses = svgEl(svg, "g", {});
+      reset();
+    }
 
     function land(m) {
       const e = edges[m[1] + "-" + m[2]];
       e.n++; e.sum += m[3];
-      const mean = e.sum / e.n;
-      e.path.setAttribute("class", "d-edge used " + kind(mean));
+      e.path.setAttribute("class", "d-edge used " + kind(e.sum / e.n));
       e.path.style.strokeWidth = (1.8 + Math.min(2.4, e.n / 16)).toFixed(2);
       labels[m[1]].sent++; labels[m[2]].got++;
-      labels.forEach((l) => { l.c.textContent = l.sent + l.got ? `sent ${l.sent}, got ${l.got}` : ""; });
+      labels.forEach((l) => { if (l.c) l.c.textContent = l.sent + l.got ? `sent ${l.sent}, got ${l.got}` : ""; });
+      const p = pairs[pairKey(m[1], m[2])];
+      if (p) { p.n++; p.sum += m[3]; p.tone.textContent = "tone so far " + fmt(p.sum / p.n); }
     }
     function logLine(m) {
       const line = html("span", { class: "log-line " + kind(m[3]) });
-      line.textContent = `r${String(m[0]).padStart(2, "0")} ${agents[m[1]]}>${agents[m[2]]}  ${fmt(m[3])}  ${m[4]}`;
+      line.textContent = `r${String(m[0]).padStart(2, "0")} ${E.agents[m[1]]}>${E.agents[m[2]]}  ${fmt(m[3])}  ${m[4]}`;
       log.append(line);
       while (log.children.length > 3) log.firstChild.remove();
     }
+    function summary() {
+      if (!E.seeded.length) return `DONE: ${E.messages.length} MESSAGES, ALL THROUGH THE REGULATOR`;
+      const mean = (sign) => {
+        const v = Object.values(pairs).filter((p) => p.sign === sign);
+        return v.reduce((s, p) => s + p.sum, 0) / Math.max(1, v.reduce((s, p) => s + p.n, 0));
+      };
+      return `DONE: TOLD-TO-BE ENEMIES AVERAGED ${fmt(mean(-1))}, FRIENDS ${fmt(mean(1))}`;
+    }
     function readout() {
-      const r = i ? messages[Math.min(i, messages.length) - 1][0] : 0;
-      counter.textContent = i >= messages.length
-        ? `DONE: ${messages.length} MESSAGES, ALL THROUGH THE REGULATOR`
-        : `ROUND ${String(r).padStart(2, "0")}/${lastRound}  MSG ${String(i).padStart(3, "0")}/${messages.length}`;
+      const M = E.messages, last = M[M.length - 1][0];
+      const r = i ? M[Math.min(i, M.length) - 1][0] : 0;
+      counter.textContent = i >= M.length && !live.length ? summary()
+        : `ROUND ${String(r).padStart(2, "0")}/${last}  MSG ${String(Math.min(i, M.length)).padStart(3, "0")}/${M.length}`;
     }
     function send() {
-      if (i >= messages.length) { clearInterval(timer); timer = null; setTimeout(() => { if (ctl.on) restart(); }, 6000); return; }
-      const m = messages[i++];
-      const e = edges[m[1] + "-" + m[2]];
-      const k = kind(m[3]);
+      const M = E.messages;
+      if (i >= M.length) { clearInterval(timer); timer = null; setTimeout(() => { if (ctl.on && i >= M.length) restart(); }, 7000); return; }
+      const m = M[i++], e = edges[m[1] + "-" + m[2]], k = kind(m[3]);
       const node = k === "dis"
         ? svgEl(pulses, "path", { class: "d-pulse dis", d: "M-4,-4L4,4M-4,4L4,-4" })
         : svgEl(pulses, "circle", { class: "d-pulse " + k, r: 4 });
       live.push({ node, e, m, t0: performance.now() });
-      logLine(m);
-      readout();
+      logLine(m); readout();
       if (!raf) raf = requestAnimationFrame(frame);
     }
     function frame(now) {
@@ -131,25 +174,29 @@
         p.node.setAttribute("transform", `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`);
         return true;
       });
+      if (!live.length) readout();
       raf = live.length ? requestAnimationFrame(frame) : null;
     }
     function reset() {
       i = 0; live.forEach((p) => p.node.remove()); live = [];
       Object.values(edges).forEach((e) => { e.n = 0; e.sum = 0; e.path.setAttribute("class", "d-edge"); e.path.style.strokeWidth = ""; });
-      labels.forEach((l) => { l.sent = 0; l.got = 0; l.c.textContent = ""; });
+      labels.forEach((l) => { l.sent = 0; l.got = 0; if (l.c) l.c.textContent = ""; });
+      Object.values(pairs).forEach((p) => { p.n = 0; p.sum = 0; p.tone.textContent = ""; });
       log.replaceChildren(); readout();
     }
     function finish() { // the end state, without animation
-      reset(); messages.forEach(land); messages.slice(-3).forEach(logLine); i = messages.length; readout();
+      reset(); E.messages.forEach(land); E.messages.slice(-3).forEach(logLine); i = E.messages.length; readout();
     }
-    function restart() { reset(); if (ctl.on) run(true); }
     function run(on) {
       clearInterval(timer); timer = null;
-      if (on && i < messages.length) timer = setInterval(send, 260);
+      if (on && i < E.messages.length) timer = setInterval(send, E.seeded.length ? 900 : 260);
     }
+    function restart() { reset(); run(ctl.on); }
     again.addEventListener("click", () => { reset(); ctl.set(true); });
+    pick.addEventListener("change", () => { setup(+pick.value); if (reduce) finish(); else run(ctl.on); });
+    setup(0);
     const ctl = playable(root, run, btn, ["[ PLAY ]", "[ PAUSE ]"]);
-    if (reduce) finish(); else readout();
+    if (reduce) finish();
   });
 
   // ---------------------------------------------------------------- the invented language
@@ -320,24 +367,38 @@
     if (reduce) { sec = span; place(); }
   });
 
-  // ---------------------------------------------------------------- the price tape
+  // ---------------------------------------------------------------- the market
+  // One logged run of the simulator: price and shares traded each round, the
+  // average wealth of each kind of trader, and the totals that must not change.
   mount("ticker", (root) => {
-    const prices = DATA.market.prices, n = prices.length;
-    const W = 360, H = 190, L = 30, R = 318, T = 12, B = 166;
-    const lo = 10, hi = 25;
-    const x = (i) => L + (i / (n - 1)) * (R - L), y = (p) => T + ((hi - p) / (hi - lo)) * (B - T);
+    const M = DATA.market, T = M.ticks, n = T.length, K = M.kinds;
+    const price = T.map((t) => t[0]), vol = T.map((t) => t[1]);
+    const W = 360, L = 30, R = 318, PT = 10, PB = 120, VT = 132, VB = 166, H = 186;
+    const lo = Math.floor(Math.min(M.start.price, ...price) / 5) * 5, hi = Math.ceil(Math.max(...price) / 5) * 5;
+    const vmax = Math.max(...vol);
+    const x = (i) => L + (i / (n - 1)) * (R - L), y = (p) => PT + ((hi - p) / (hi - lo)) * (PB - PT);
+    // how much richer or poorer each kind is than a trader who kept its starting
+    // cash and shares and never traded (so a rising price alone scores zero)
+    const gain = (k, i) => (T[i][2 + k] / (K[k].cash0 + K[k].shares0 * price[i]) - 1) * 100;
+    const order = K.map((_, k) => k).sort((a, b) => gain(b, n - 1) - gain(a, n - 1));
+    let peak = 1;
+    for (let i = 0; i < n; i++) for (let k = 0; k < K.length; k++) peak = Math.max(peak, Math.abs(gain(k, i)));
 
-    root.append(html("p", { class: "viz-explain", text: "202 robot traders, each following its own rule, buy and sell one made-up stock. Nobody sets the price: it is simply what the latest trades went for. These are 300 rounds of trading." }));
+    root.append(html("p", { class: "viz-explain", text: `${M.traders} robot traders, each following one simple rule, buy and sell a single made-up stock. Nobody sets the price: it is whatever the latest trades went for. Watch ${n} rounds, and see which rule makes money.` }));
     const read = html("p", { class: "viz-read tick-read", "aria-live": "off" });
     root.append(read);
-    const svg = svgEl(null, "svg", { class: "tick-svg", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The stock price drawn round by round" });
+    const svg = svgEl(null, "svg", { class: "tick-svg", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "The stock price and the number of shares traded, round by round" });
     root.append(svg);
-    [10, 15, 20, 25].forEach((v) => {
+    for (let v = lo; v <= hi; v += 5) {
       svgEl(svg, "line", { class: "t-grid", x1: L, x2: R, y1: y(v), y2: y(v) });
       svgEl(svg, "text", { class: "t-axis", x: L - 6, y: y(v) + 5, "text-anchor": "end" }, v);
-    });
-    [0, 100, 200, 300].forEach((v) => svgEl(svg, "text", { class: "t-axis", x: x(Math.min(v, n - 1)), y: H - 6, "text-anchor": "middle" }, v));
-    const ghost = svgEl(svg, "path", { class: "t-ghost", d: "M" + prices.map((p, i) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join("L") });
+    }
+    svgEl(svg, "text", { class: "t-axis", x: R + 6, y: VB, "text-anchor": "start" }, "traded");
+    svgEl(svg, "line", { class: "t-grid", x1: L, x2: R, y1: VB, y2: VB });
+    [0, 100, 200, 300].forEach((v) => svgEl(svg, "text", { class: "t-axis", x: x(Math.min(v, n - 1)), y: H - 4, "text-anchor": "middle" }, v));
+    const bw = Math.max(0.6, (R - L) / n - 0.3);
+    const bars = vol.map((v, i) => svgEl(svg, "rect", { class: "t-vol", x: x(i) - bw / 2, width: bw, y: VB - (v / vmax) * (VB - VT), height: (v / vmax) * (VB - VT) }));
+    svgEl(svg, "path", { class: "t-ghost", d: "M" + price.map((p, i) => `${x(i).toFixed(1)},${y(p).toFixed(1)}`).join("L") });
     const line = svgEl(svg, "path", { class: "t-line" });
     const head = svgEl(svg, "circle", { class: "t-head", r: 4 });
     const tag = svgEl(svg, "text", { class: "t-tag" });
@@ -345,26 +406,42 @@
     const btn = html("button", { class: "viz-btn", type: "button" });
     const scrub = html("input", { type: "range", min: 0, max: n - 1, value: 0, "aria-label": "Round of trading" });
     root.append(html("div", { class: "viz-bar" }, btn, scrub));
-    root.append(html("p", { class: "viz-note", text: "THE TRADERS: 160 WRITTEN IN C++ (100 RANDOM, 20 SMART, 20 MARKET-ORDER, 20 LIMIT-ORDER) AND 42 IN PYTHON (30 RANDOM, 10 MOVING-AVERAGE, 2 LSTM NEURAL NETWORKS)." }));
+
+    root.append(html("p", { class: "viz-read board-head", text: "WHO BEAT DOING NOTHING? EACH KIND OF TRADER'S AVERAGE WEALTH, COMPARED WITH ONE WHO KEPT ITS STARTING CASH AND SHARES AND NEVER TRADED:" }));
+    const board = html("div", { class: "board" });
+    const rows = order.map((k) => {
+      const bar = html("span", { class: "b-bar" }), pct = html("span", { class: "b-pct" });
+      board.append(html("div", { class: "b-row", title: K[k].rule },
+        html("span", { class: "b-name", text: `${K[k].label} \u00d7${K[k].n}` }), bar, pct, html("span", { class: "b-rule", text: K[k].rule })));
+      return { k, bar, pct };
+    });
+    root.append(board);
+    root.append(html("p", { class: "viz-note audit", text: `AUDIT ✓ ${M.audit.shares.toLocaleString("en-US")} SHARES AND $${M.audit.cash.toLocaleString("en-US")} IN CASH EXIST BEFORE THE FIRST ROUND AND AFTER EVERY ONE OF THE ${n}. TRADING ONLY MOVES THEM BETWEEN TRADERS, SO THE WINNERS' GAINS ABOVE ARE EXACTLY THE LOSERS' LOSSES.` }));
 
     let i = 0, timer = null;
     function place() {
       let d = "";
-      for (let k = 0; k <= i; k++) d += (k ? "L" : "M") + x(k).toFixed(1) + "," + y(prices[k]).toFixed(1);
+      for (let k = 0; k <= i; k++) d += (k ? "L" : "M") + x(k).toFixed(1) + "," + y(price[k]).toFixed(1);
       line.setAttribute("d", d);
-      head.setAttribute("cx", x(i)); head.setAttribute("cy", y(prices[i]));
-      tag.setAttribute("x", Math.min(x(i) + 8, W - 2)); tag.setAttribute("y", y(prices[i]) + 5);
-      tag.textContent = prices[i].toFixed(1);
-      const ch = i ? prices[i] - prices[i - 1] : 0;
-      const seen = prices.slice(0, i + 1);
-      read.textContent = `ROUND ${String(i).padStart(3, "0")}  PRICE ${prices[i].toFixed(2)}  ${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch).toFixed(2)}  HIGH ${Math.max(...seen).toFixed(1)}  LOW ${Math.min(...seen).toFixed(1)}`;
+      head.setAttribute("cx", x(i)); head.setAttribute("cy", y(price[i]));
+      tag.setAttribute("x", Math.min(x(i) + 8, W - 2)); tag.setAttribute("y", y(price[i]) + 5);
+      tag.textContent = price[i].toFixed(1);
+      bars.forEach((b, k) => b.classList.toggle("on", k <= i));
+      const ch = price[i] - (i ? price[i - 1] : M.start.price);
+      read.textContent = `ROUND ${String(i + 1).padStart(3, "0")}  PRICE ${price[i].toFixed(2)} ${ch >= 0 ? "▲" : "▼"}${Math.abs(ch).toFixed(2)}  TRADED ${vol[i]} SHARES`;
+      rows.forEach((r) => {
+        const g = gain(r.k, i), blocks = Math.round((Math.abs(g) / peak) * 12);
+        r.bar.textContent = (g < 0 ? "▒" : "█").repeat(blocks);
+        r.bar.className = g < 0 ? "b-bar loss" : "b-bar";
+        r.pct.textContent = (g >= 0 ? "+" : "−") + Math.abs(g).toFixed(1) + "%";
+        r.pct.className = g < 0 ? "b-pct loss" : "b-pct";
+      });
       scrub.value = i;
     }
     function tick() { i = i >= n - 1 ? 0 : i + 1; place(); }
-    const ctl = playable(root, (on) => { clearInterval(timer); timer = null; if (on) timer = setInterval(tick, 70); }, btn, ["[ PLAY ]", "[ PAUSE ]"]);
+    const ctl = playable(root, (on) => { clearInterval(timer); timer = null; if (on) timer = setInterval(tick, 90); }, btn, ["[ PLAY ]", "[ PAUSE ]"]);
     scrub.addEventListener("input", () => { ctl.set(false); i = +scrub.value; place(); });
     if (reduce) i = n - 1;
-    ghost.style.display = reduce ? "none" : "";
     place();
   });
 

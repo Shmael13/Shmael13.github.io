@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ismail Syed</title>
-<meta name="description" content="Ismail Syed works on quantitative research tools and machine learning. Every result on this page names what it was computed from.">
+<meta name="description" content="Ismail Syed builds tools for quantitative research and runs machine learning experiments.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..900,0..100&family=IBM+Plex+Sans:wght@400;500;600&family=Pixelify+Sans:wght@400;600&family=VT323&display=swap" rel="stylesheet">
@@ -37,7 +37,6 @@
     <div class="mac-body hero-body">
       <h1 id="hero-name">Ismail Syed</h1>
       <p class="role">Computer science at Rice University. I build tools for quantitative research and run machine learning experiments, in Python and C/C++.</p>
-      <p class="pledge">Every result on this page names what it was computed from. And each project opens in a different era of computing: a classic Mac, an 80s terminal, Windows 95 and a 70s lab manual.</p>
     </div>
   </section>
 
@@ -104,9 +103,9 @@
       <div class="proj">
         <div class="proj-text">
           <h3 id="c559-h">Sentiment dynamics on LLM agent graphs</h3>
-          <p>An async simulator that runs LLM agents over a directed graph, scores every message for agreement with an NLI cross-encoder, and folds the score into signed edge weights. We used it to test whether structural balance theory holds for LLM triads.</p>
+          <p>An async simulator that runs LLM agents over a directed graph, scores every message for agreement or tone, and folds the score into signed edge weights. We ran seven experiments with it: one four-agent debate, and six three-agent triads that test whether balance theory (&ldquo;my friend&rsquo;s enemy is my enemy&rdquo;) holds for LLMs.</p>
           <p class="amount">6 <small>OF 12</small></p>
-          <p class="what">possible edges carried any of the 241 messages, every one touching the same agent</p>
+          <p class="what">possible links carried any of the debate's 241 messages. The four chatbots could all talk to each other, but every message went through one of them</p>
           <p class="from"><span>computed from</span> the run's message log</p>
           <p class="links"><span>Python, asyncio, Transformers, NetworkX, Ollama</span><a href="https://github.com/Shmael13/Comp559">Code</a><a href="https://github.com/Shmael13/Comp559/blob/main/Report%20-%20Final%20Up%20to%20Date/Final%20-%20COMP_559_Project.pdf">Report</a></p>
         </div>
@@ -118,7 +117,7 @@ r14 pragmatist&gt;regulator   +0.99  Enforceable global treaties are essential f
 r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treaties&hellip;</pre>
           <!--FIG:comp559-->
           </div>
-          <figcaption>A replay of the real debate log: 241 messages over 80 rounds, each with its agreement score.</figcaption>
+          <figcaption>Replays of the real logs: the 241-message debate and five triad runs. The sixth triad log is a copy of another run, so it is left out.</figcaption>
         </figure>
       </div>
     </div>
@@ -174,14 +173,14 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
         <div class="proj-text">
           <h3 id="mk-h">Multi-agent market simulation</h3>
           <p>A tick-based stock exchange in C++ where autonomous agents trade through per-stock limit order books with market orders, limit orders and partial fills. Matching crosses the best bid and ask from price-priority heaps and sets each tick's price to the volume-weighted fill price. Strategies run in C++ or in Python through an embedded interpreter, up to an LSTM price predictor.</p>
-          <p class="amount">0 <small>OF 320</small></p>
-          <p class="what">ticks where total shares or cash changed: nothing is created or lost</p>
-          <p class="from"><span>computed from</span> a check after every tick of a 320-tick run</p>
+          <p class="amount">101 <small>TRADERS</small></p>
+          <p class="what">following 7 different rules moved the price from $10.00 to $17.26 in 300 rounds. Nobody sets the price; it comes out of their orders</p>
+          <p class="from"><span>computed from</span> one logged 300-round run of the simulator</p>
           <p class="links"><span>C++23, CMake, OpenMP, pybind11, Python</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Economic_Models/Multi_Agent_Market_Simulation">Code</a></p>
         </div>
         <figure class="fig">
           <div class="viz" data-viz="ticker"><!--FIG:market--></div>
-          <figcaption>The price from one real 300-round run of the simulator. Drag the slider to scrub.</figcaption>
+          <figcaption>One real 300-round run, logged after every round. Drag the slider to scrub through it.</figcaption>
         </figure>
       </div>
     </div>

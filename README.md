@@ -6,10 +6,10 @@ It's a single static page styled as a retro desktop: each project opens in a dif
 
 - **leakproof** has a "Spot the leak" walkthrough: four ways a backtest peeks at the future, each as a short code sketch, an animated one-arrow timeline, and the verdict, with a toggle to show the fix.
 - Every project has a live figure built from that project's own data, written for someone who has never seen the project:
-  - a replay of the real LLM-agent debate log, message by message;
+  - replays of the real LLM-agent logs, message by message: the four-agent debate and five three-agent balance-theory triads;
   - the language two neural networks invented, one made-up word per object;
   - a chart recorder drawing real accelerometer traces for walking and sleeping;
-  - the market simulation's price, round by round;
+  - one logged run of the market simulation: the price and volume round by round, a scoreboard of which trading rule beat never trading, and the totals of shares and cash that must not change;
   - a particle-life world running in the browser with the simulator's rules;
   - a slider that rebuilds an image from more or fewer SVD patterns.
 - Every headline number says what it was computed from. Animations pause when off screen and respect the reduced-motion setting.
