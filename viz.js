@@ -56,7 +56,7 @@
     root.append(html("label", { class: "viz-pick" }, "EXPERIMENT ", pick));
     const explain = html("p", { class: "viz-explain" });
     root.append(explain);
-    const svg = svgEl(null, "svg", { class: "debate-svg", viewBox: "0 0 360 252", role: "img", "aria-label": "Replay of the conversation: messages travel between the agents" });
+    const svg = svgEl(null, "svg", { class: "debate-svg", viewBox: "0 0 360 300", role: "img", "aria-label": "Replay of the conversation: messages travel between the agents" });
     root.append(svg);
     const log = html("pre", { class: "term-log", "aria-live": "off" });
     root.append(log);
@@ -69,7 +69,7 @@
     const note = html("p", { class: "viz-note" });
     root.append(note);
 
-    let E, edges, labels, pairs, pulses, cut, i = 0, timer = null, raf = null, live = [];
+    let E, edges, labels, pairs, pulses, ticks, cut, i = 0, timer = null, raf = null, live = [];
     const kind = (s) => (s >= cut ? "agree" : s <= -cut ? "dis" : "neutral");
     const fmt = (s) => (s >= 0 ? "+" : "−") + Math.abs(s).toFixed(2);
     const pairKey = (a, b) => Math.min(a, b) + "-" + Math.max(a, b);
@@ -83,10 +83,12 @@
       const cx = pos.reduce((s, p) => s + p[0], 0) / pos.length, cy = pos.reduce((s, p) => s + p[1], 0) / pos.length;
       explain.textContent = triad
         ? `Balance theory says “my friend’s enemy is my enemy”. Three chatbots are told who their friends and enemies are (${E.kind === "balanced" ? "two allies against one outsider, a stable set-up" : "one is friends with two who dislike each other, a tense set-up"}), then discuss: “${E.topic}” Each message’s tone is scored from −1 (hostile) to +1 (friendly).`
-        : `Four AI chatbots argue: “${E.topic}” Every message is scored from −1 (disagrees with what it answers) to +1 (agrees). Watch who ends up talking to whom.`;
+        : `Four AI chatbots with opposed views argue: “${E.topic}” Each opens with one message to a randomly drawn partner, and from then on everyone only replies to whoever wrote to them. Here all three critics drew the regulator, so every exchange runs through it. Each reply is scored from −1 (disagrees with what it answers) to +1 (agrees). Watch the disagreement fade.`;
       keyGood.textContent = triad ? "● friendly" : "● agrees";
       keyBad.textContent = triad ? "✕ hostile" : "✕ disagrees";
-      note.textContent = triad ? "What the experiments found: scores drift mildly positive even between pairs told to be enemies. Partly the chatbots smooth things over, and partly the simple tone scorer misses sarcasm, as some log lines show." : "";
+      note.textContent = !triad
+        ? "What the log shows: the critics start out arguing and end up repeating the regulator. By round 60 all three send it the same sentence. A high score means a reply restates the message it answers, which is not always the same as being persuaded."
+        : "What the experiments found: scores drift mildly positive even between pairs told to be enemies. Partly the chatbots smooth things over, and partly the simple tone scorer misses sarcasm, as some log lines show.";
 
       svg.replaceChildren();
       edges = {};
@@ -121,6 +123,16 @@
         const c = triad ? null : svgEl(svg, "text", { class: "d-count", x: hub ? x + 14 : x, y: hub ? y + 21 : (top ? y - 28 : y + 38), "text-anchor": hub ? "start" : "middle" }, "");
         return { c, sent: 0, got: 0 };
       });
+      // one tick per reply, in order, so the drift in tone is visible at a glance
+      const lastRound = E.messages[E.messages.length - 1][0], colW = 340 / (lastRound + 1), tw = Math.min(12, colW - 0.8);
+      svgEl(svg, "text", { class: "d-count", x: 10, y: 262 }, "EVERY REPLY, IN ORDER:");
+      svgEl(svg, "text", { class: "d-count", x: 10, y: 298 }, "round 0");
+      svgEl(svg, "text", { class: "d-count", x: 350, y: 298, "text-anchor": "end" }, "round " + lastRound);
+      const slot = {};
+      ticks = E.messages.map((m) => {
+        const k2 = slot[m[0]] = (slot[m[0]] || 0) + 1;
+        return svgEl(svg, "rect", { class: "d-tick", x: 10 + m[0] * colW + (colW - tw) / 2, y: 262 + k2 * 6, width: tw, height: 5 });
+      });
       pulses = svgEl(svg, "g", {});
       reset();
     }
@@ -135,6 +147,7 @@
       const p = pairs[pairKey(m[1], m[2])];
       if (p) { p.n++; p.sum += m[3]; p.tone.textContent = "tone so far " + fmt(p.sum / p.n); }
     }
+    function mark(idx) { ticks[idx].setAttribute("class", "d-tick " + kind(E.messages[idx][3])); }
     function logLine(m) {
       const line = html("span", { class: "log-line " + kind(m[3]) });
       line.textContent = `r${String(m[0]).padStart(2, "0")} ${E.agents[m[1]]}>${E.agents[m[2]]}  ${fmt(m[3])}  ${m[4]}`;
@@ -142,7 +155,13 @@
       while (log.children.length > 3) log.firstChild.remove();
     }
     function summary() {
-      if (!E.seeded.length) return `DONE: ${E.messages.length} MESSAGES, ALL THROUGH THE REGULATOR`;
+      if (!E.seeded.length) {
+        const agree = (a, b) => {
+          const v = E.messages.filter((m) => m[0] >= a && m[0] <= b);
+          return Math.round((100 * v.filter((m) => kind(m[3]) === "agree").length) / v.length);
+        };
+        return `DONE: REPLIES SCORED AS AGREEING ROSE FROM ${agree(1, 10)}% (ROUNDS 1-10) TO ${agree(31, 60)}% (ROUNDS 31-60)`;
+      }
       const mean = (sign) => {
         const v = Object.values(pairs).filter((p) => p.sign === sign);
         return v.reduce((s, p) => s + p.sum, 0) / Math.max(1, v.reduce((s, p) => s + p.n, 0));
@@ -158,6 +177,7 @@
     function send() {
       const M = E.messages;
       if (i >= M.length) { clearInterval(timer); timer = null; setTimeout(() => { if (ctl.on && i >= M.length) restart(); }, 7000); return; }
+      mark(i);
       const m = M[i++], e = edges[m[1] + "-" + m[2]], k = kind(m[3]);
       const node = k === "dis"
         ? svgEl(pulses, "path", { class: "d-pulse dis", d: "M-4,-4L4,4M-4,4L4,-4" })
@@ -182,10 +202,11 @@
       Object.values(edges).forEach((e) => { e.n = 0; e.sum = 0; e.path.setAttribute("class", "d-edge"); e.path.style.strokeWidth = ""; });
       labels.forEach((l) => { l.sent = 0; l.got = 0; if (l.c) l.c.textContent = ""; });
       Object.values(pairs).forEach((p) => { p.n = 0; p.sum = 0; p.tone.textContent = ""; });
+      ticks.forEach((t) => t.setAttribute("class", "d-tick"));
       log.replaceChildren(); readout();
     }
     function finish() { // the end state, without animation
-      reset(); E.messages.forEach(land); E.messages.slice(-3).forEach(logLine); i = E.messages.length; readout();
+      reset(); E.messages.forEach((m, idx) => { land(m); mark(idx); }); E.messages.slice(-3).forEach(logLine); i = E.messages.length; readout();
     }
     function run(on) {
       clearInterval(timer); timer = null;

@@ -104,9 +104,9 @@
         <div class="proj-text">
           <h3 id="c559-h">Sentiment dynamics on LLM agent graphs</h3>
           <p>An async simulator that runs LLM agents over a directed graph, scores every message for agreement or tone, and folds the score into signed edge weights. We ran seven experiments with it: one four-agent debate, and six three-agent triads that test whether balance theory (&ldquo;my friend&rsquo;s enemy is my enemy&rdquo;) holds for LLMs.</p>
-          <p class="amount">6 <small>OF 12</small></p>
-          <p class="what">possible links carried any of the debate's 241 messages. The four chatbots could all talk to each other, but every message went through one of them</p>
-          <p class="from"><span>computed from</span> the run's message log</p>
+          <p class="amount">40% <small>TO 88%</small></p>
+          <p class="what">of replies scored as agreeing with the message they answer, in rounds 1&ndash;10 versus rounds 31&ndash;60 of the debate. The libertarian opens with &ldquo;Global regulation of AI would stifle innovation&rdquo; and by round 60 writes &ldquo;Exactly; without enforceable global treaties&hellip;&rdquo;</p>
+          <p class="from"><span>computed from</span> the debate's 241-message log, scored by an NLI model. A high score means a reply restates what it answers</p>
           <p class="links"><span>Python, asyncio, Transformers, NetworkX, Ollama</span><a href="https://github.com/Shmael13/Comp559">Code</a><a href="https://github.com/Shmael13/Comp559/blob/main/Report%20-%20Final%20Up%20to%20Date/Final%20-%20COMP_559_Project.pdf">Report</a></p>
         </div>
         <figure class="fig">

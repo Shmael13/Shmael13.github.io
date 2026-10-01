@@ -387,6 +387,10 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .d-name { font-family: var(--crt); font-size: 18px; fill: #ffb000; }
 .d-count { font-family: var(--crt); font-size: 14px; fill: #c98a00; }
 .d-told { font-family: var(--crt); font-size: 15px; fill: #ffd27a; }
+.d-tick { fill: #2b1e00; }
+.d-tick.agree { fill: #ffb000; }
+.d-tick.neutral { fill: #8a6100; }
+.d-tick.dis { fill: #ff5a3c; }
 .viz-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 1.2rem; }
 .viz-pick select {
   flex: 1; min-width: 0; font: inherit; color: #ffb000; background: #0c0800; border: 1px solid #ffb000;
