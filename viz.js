@@ -437,6 +437,24 @@
       return { k, bar, pct };
     });
     root.append(board);
+
+    // why the ranking comes out this way: the price each kind of trader got
+    const Y = M.why, coin = K.find((k) => k.id === "Py_Random");
+    const stake = coin.cash0 + coin.shares0 * M.start.price;
+    const side = (v, goodIfBelow) => {
+      if (v == null) return html("span", { class: "y-cell", text: "never" });
+      const below = v < 0, txt = v === 0 ? "same price" : `${Math.abs(v).toFixed(1)}% ${below ? "below" : "above"}`;
+      return html("span", { class: "y-cell" + (v !== 0 && below !== goodIfBelow ? " loss" : ""), text: txt });
+    };
+    root.append(html("p", { class: "viz-read board-head", text: "WHY DOES THE COIN FLIP WIN?" }));
+    root.append(html("p", { class: "viz-note why", text:
+      `NOT BY CHOOSING WELL. IT WINS ON THE PRICE IT GETS. A COIN-FLIP TRADER ONLY EVER SAYS \u201cBUY NOW\u201d OR \u201cSELL NOW\u201d AT ANY PRICE, SO THE EXCHANGE PAIRS IT WITH THE BEST OFFER ON THE OTHER SIDE. THE RANDOM-ORDERS TRADERS SUPPLY THOSE OFFERS: THEY NAME PRICES UP TO 20% ABOVE OR 10% BELOW THE GOING PRICE WITHOUT LOOKING. IN THIS RUN THE COIN FLIPPERS SOLD THEM ${Y.coin_sold_to_random.shares.toLocaleString("en-US")} SHARES AT ${Y.coin_sold_to_random.vs.toFixed(1)}% ABOVE THE GOING PRICE AND BOUGHT ${Y.coin_bought_from_random.shares.toLocaleString("en-US")} FROM THEM AT ${Math.abs(Y.coin_bought_from_random.vs).toFixed(1)}% BELOW. A SMALL EDGE, TAKEN EVERY ROUND FOR ${n} ROUNDS, CAME TO $${Math.round(coin.edge_each)} PER COIN-FLIP TRADER ON A $${Math.round(stake)} STAKE.` }));
+    root.append(html("p", { class: "viz-read board-head", text: "THE PRICE EACH KIND GOT, AGAINST THE GOING PRICE:" }));
+    const why = html("div", { class: "why-table" });
+    why.append(html("div", { class: "y-row y-head" }, html("span", {}), html("span", { class: "y-cell", text: "BOUGHT AT" }), html("span", { class: "y-cell", text: "SOLD AT" })));
+    order.forEach((k) => why.append(html("div", { class: "y-row" }, html("span", { text: K[k].label }), side(K[k].buy_vs, true), side(K[k].sell_vs, false))));
+    root.append(why);
+    root.append(html("p", { class: "viz-note", text: "ALWAYS BUYS HAS NO SUCH EDGE: IT SPENT ALL ITS CASH ON SHARES IN THE FIRST ROUNDS, AT ABOUT $10, AND RODE THE PRICE UP. HIGH BIDDER KEEPS OFFERING $40 FOR SHARES WORTH FAR LESS. THE SIMULATOR ISN'T SEEDED, SO THE NUMBERS CHANGE FROM RUN TO RUN, BUT IN A SECOND RUN THE COIN FLIP AGAIN CAME FIRST AND RANDOM ORDERS LAST." }));
     root.append(html("p", { class: "viz-note audit", text: `AUDIT ✓ ${M.audit.shares.toLocaleString("en-US")} SHARES AND $${M.audit.cash.toLocaleString("en-US")} IN CASH EXIST BEFORE THE FIRST ROUND AND AFTER EVERY ONE OF THE ${n}. TRADING ONLY MOVES THEM BETWEEN TRADERS, SO THE WINNERS' GAINS ABOVE ARE EXACTLY THE LOSERS' LOSSES.` }));
 
     let i = 0, timer = null;

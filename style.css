@@ -416,6 +416,11 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .b-bar.loss, .b-pct.loss { color: #ff7a5c; text-shadow: 0 0 5px rgba(255, 90, 60, 0.5); }
 .b-rule { grid-column: 1 / -1; font-size: 1.02rem; color: #c98a00; }
 .audit { margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid #5a3f00; }
+.why-table { margin-top: 0.3rem; font-family: var(--crt); font-size: 1.2rem; line-height: 1.15; }
+.y-row { display: grid; grid-template-columns: minmax(0, 1fr) 11.5ch 11.5ch; gap: 0 0.8ch; padding: 0.1rem 0; }
+.y-head { color: #c98a00; }
+.y-cell { text-align: right; }
+.y-cell.loss { color: #ff7a5c; text-shadow: 0 0 5px rgba(255, 90, 60, 0.5); }
 .tick-svg .t-tag { font-family: var(--crt); font-size: 17px; fill: #ffe9b0; }
 .term input[type="range"] { flex: 1; min-width: 7rem; accent-color: #ffb000; }
 .cursor { display: inline-block; width: 0.55em; height: 0.9em; background: currentColor; vertical-align: -0.08em; animation: blink 1.1s steps(1) infinite; }
