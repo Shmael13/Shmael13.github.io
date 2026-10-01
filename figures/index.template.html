@@ -169,7 +169,7 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
   <article class="term" id="market" aria-labelledby="mk-h">
     <div class="term-screen">
       <p class="term-status"><span>SIM EXCHANGE</span><span>AUG 2025 <i class="cursor" aria-hidden="true"></i></span></p>
-      <div class="proj">
+      <div class="proj proj-split">
         <div class="proj-text">
           <h3 id="mk-h">Multi-agent market simulation</h3>
           <p>A tick-based stock exchange in C++ where autonomous agents trade through per-stock limit order books with market orders, limit orders and partial fills. Matching crosses the best bid and ask from price-priority heaps and sets each tick's price to the volume-weighted fill price. Strategies run in C++ or in Python through an embedded interpreter, up to an LSTM price predictor.</p>
@@ -177,6 +177,7 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
           <p class="what">following 7 different rules moved the price from $10.00 to $16.13 in 300 rounds. Nobody sets the price; it comes out of their orders</p>
           <p class="from"><span>computed from</span> one logged 300-round run of the simulator</p>
           <p class="links"><span>C++23, CMake, OpenMP, pybind11, Python</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Economic_Models/Multi_Agent_Market_Simulation">Code</a></p>
+          <div class="results" data-results="ticker"></div>
         </div>
         <figure class="fig">
           <div class="viz" data-viz="ticker"><!--FIG:market--></div>

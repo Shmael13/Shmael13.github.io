@@ -344,12 +344,15 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .tray { margin: 0 0 0 auto; padding: 3px 8px; box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; }
 
 /* ---------------------------------------------------------------- small screens */
-/* On wide screens the text keeps pace beside a tall figure. */
-@media (min-width: 961px) {
-  .proj > .proj-text { position: sticky; top: 3.4rem; }
-}
+/* viz.js marks the shorter column of a panel so it stays in view beside the taller one. */
+.proj > .stick { position: sticky; top: 3.4rem; }
 @media (max-width: 960px) {
   .proj, .lp-top, .spot-panel, .closing { grid-template-columns: 1fr; }
+  /* stacked: intro, then the figure, then the written results */
+  .proj-split { display: flex; flex-direction: column; gap: 0; }
+  .proj-split > .proj-text { display: contents; }
+  .proj-split > .fig { order: 2; margin: 1rem 0 0.5rem; }
+  .proj-split .results { order: 3; }
   .desk > article { max-width: none; }
 }
 @media (max-width: 560px) {
@@ -414,7 +417,14 @@ code { font-family: var(--mono); font-size: 0.85em; }
 .b-bar { white-space: nowrap; overflow: hidden; letter-spacing: -0.02em; }
 .b-pct { text-align: right; }
 .b-bar.loss, .b-pct.loss { color: #ff7a5c; text-shadow: 0 0 5px rgba(255, 90, 60, 0.5); }
-.b-rule { grid-column: 1 / -1; font-size: 1.02rem; color: #c98a00; }
+.results { margin-top: 1.4rem; padding-top: 0.4rem; border-top: 1px solid #5a3f00; }
+.results:empty { display: none; }
+.r-head { margin: 1.1rem 0 0.35rem; font-weight: 400; font-size: 1.6rem; line-height: 1; color: #ffc74d; }
+.r-text { margin: 0 0 0.6rem; max-width: 62ch; font-size: 1.3rem; line-height: 1.2; }
+.r-rules { margin: 0; padding: 0; list-style: none; font-size: 1.3rem; line-height: 1.2; }
+.r-rules li { margin-bottom: 0.3rem; }
+.r-rules b { font-weight: 400; color: #ffe9b0; }
+.results .why-table { max-width: 30rem; margin: 0 0 0.7rem; font-size: 1.3rem; }
 .audit { margin-top: 0.8rem; padding-top: 0.5rem; border-top: 1px solid #5a3f00; }
 .why-table { margin-top: 0.3rem; font-family: var(--crt); font-size: 1.2rem; line-height: 1.15; }
 .y-row { display: grid; grid-template-columns: minmax(0, 1fr) 11.5ch 11.5ch; gap: 0 0.8ch; padding: 0.1rem 0; }

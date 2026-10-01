@@ -462,15 +462,25 @@
     const scrub = html("input", { type: "range", min: 0, max: n - 1, value: 0, "aria-label": "Round of trading" });
     root.append(html("div", { class: "viz-bar" }, btn, scrub));
 
-    root.append(html("p", { class: "viz-read board-head", text: "WHO BEAT DOING NOTHING? EACH KIND OF TRADER'S AVERAGE WEALTH, COMPARED WITH ONE WHO KEPT ITS STARTING CASH AND SHARES AND NEVER TRADED:" }));
+    root.append(html("p", { class: "viz-read board-head", text: "WHO BEAT DOING NOTHING? AVERAGE WEALTH BY KIND OF TRADER, AGAINST ONE WHO NEVER TRADED:" }));
     const board = html("div", { class: "board" });
     const rows = order.map((k) => {
       const bar = html("span", { class: "b-bar" }), pct = html("span", { class: "b-pct" });
-      board.append(html("div", { class: "b-row", title: K[k].rule },
-        html("span", { class: "b-name", text: `${K[k].label} \u00d7${K[k].n}` }), bar, pct, html("span", { class: "b-rule", text: K[k].rule })));
+      board.append(html("div", { class: "b-row", title: K[k].rule }, html("span", { class: "b-name", text: `${K[k].label} ×${K[k].n}` }), bar, pct));
       return { k, bar, pct };
     });
     root.append(board);
+
+    // The written results go in the text column, so the chart and scoreboard
+    // can stay in view while they are read.
+    const card = root.closest("article");
+    const out = (card && card.querySelector('[data-results="ticker"]')) || root;
+    const section = (title, ...kids) => out.append(html("h4", { class: "r-head", text: title }), ...kids);
+    const para = (text) => html("p", { class: "r-text", text });
+
+    const rules = html("ul", { class: "r-rules" });
+    order.forEach((k) => rules.append(html("li", {}, html("b", { text: `${K[k].label.charAt(0) + K[k].label.slice(1).toLowerCase()} (${K[k].n})` }), " " + K[k].rule)));
+    section("The seven rules", rules);
 
     // why the ranking comes out this way: the price each kind of trader got
     const Y = M.why, coin = K.find((k) => k.id === "Py_Random");
@@ -480,15 +490,14 @@
       const below = v < 0, txt = v === 0 ? "same price" : `${Math.abs(v).toFixed(1)}% ${below ? "below" : "above"}`;
       return html("span", { class: "y-cell" + (v !== 0 && below !== goodIfBelow ? " loss" : ""), text: txt });
     };
-    root.append(html("p", { class: "viz-read board-head", text: "WHY DOES THE COIN FLIP WIN?" }));
-    root.append(html("p", { class: "viz-note why", text:
-      `NOT BY CHOOSING WELL. IT WINS ON THE PRICE IT GETS. A COIN-FLIP TRADER ONLY EVER SAYS \u201cBUY NOW\u201d OR \u201cSELL NOW\u201d AT ANY PRICE, SO THE EXCHANGE PAIRS IT WITH THE BEST OFFER ON THE OTHER SIDE. THE RANDOM-ORDERS TRADERS SUPPLY THOSE OFFERS: THEY NAME PRICES UP TO 20% ABOVE OR 10% BELOW THE GOING PRICE WITHOUT LOOKING. IN THIS RUN THE COIN FLIPPERS SOLD THEM ${Y.coin_sold_to_random.shares.toLocaleString("en-US")} SHARES AT ${Y.coin_sold_to_random.vs.toFixed(1)}% ABOVE THE GOING PRICE AND BOUGHT ${Y.coin_bought_from_random.shares.toLocaleString("en-US")} FROM THEM AT ${Math.abs(Y.coin_bought_from_random.vs).toFixed(1)}% BELOW. A SMALL EDGE, TAKEN EVERY ROUND FOR ${n} ROUNDS, CAME TO $${Math.round(coin.edge_each)} PER COIN-FLIP TRADER ON A $${Math.round(stake)} STAKE.` }));
-    root.append(html("p", { class: "viz-read board-head", text: "THE PRICE EACH KIND GOT, AGAINST THE GOING PRICE:" }));
+    section("Why does the coin flip win?", para(
+      `Not by choosing well. It wins on the price it gets. A coin-flip trader only ever says “buy now” or “sell now” at any price, so the exchange pairs it with the best offer on the other side. The random-orders traders supply those offers: they name prices up to 20% above or 10% below the going price without looking. In this run the coin flippers sold them ${Y.coin_sold_to_random.shares.toLocaleString("en-US")} shares at ${Y.coin_sold_to_random.vs.toFixed(1)}% above the going price and bought ${Y.coin_bought_from_random.shares.toLocaleString("en-US")} from them at ${Math.abs(Y.coin_bought_from_random.vs).toFixed(1)}% below. A small edge, taken every round for ${n} rounds, came to $${Math.round(coin.edge_each)} per coin-flip trader on a $${Math.round(stake)} stake.`));
     const why = html("div", { class: "why-table" });
-    why.append(html("div", { class: "y-row y-head" }, html("span", {}), html("span", { class: "y-cell", text: "BOUGHT AT" }), html("span", { class: "y-cell", text: "SOLD AT" })));
-    order.forEach((k) => why.append(html("div", { class: "y-row" }, html("span", { text: K[k].label }), side(K[k].buy_vs, true), side(K[k].sell_vs, false))));
-    root.append(why);
-    root.append(html("p", { class: "viz-note", text: "ALWAYS BUYS HAS NO SUCH EDGE: IT SPENT ALL ITS CASH ON SHARES IN THE FIRST ROUNDS, AT ABOUT $10, AND RODE THE PRICE UP. HIGH BIDDER KEEPS OFFERING $40 FOR SHARES WORTH FAR LESS. THE SIMULATOR ISN'T SEEDED, SO THE NUMBERS CHANGE FROM RUN TO RUN, BUT IN A SECOND RUN THE COIN FLIP AGAIN CAME FIRST AND RANDOM ORDERS LAST." }));
+    why.append(html("div", { class: "y-row y-head" }, html("span", {}), html("span", { class: "y-cell", text: "bought at" }), html("span", { class: "y-cell", text: "sold at" })));
+    order.forEach((k) => why.append(html("div", { class: "y-row" }, html("span", { text: K[k].label.charAt(0) + K[k].label.slice(1).toLowerCase() }), side(K[k].buy_vs, true), side(K[k].sell_vs, false))));
+    section("The price each kind got, against the going price", why, para(
+      "Always buys has no such edge: it spent all its cash on shares in the first rounds, at about $10, and rode the price up. High bidder keeps offering $40 for shares worth far less. The simulator isn't seeded, so the numbers change from run to run, but in a second run the coin flip again came first and random orders last."));
+
     // why the neural network doesn't win: it gets no price edge, barely trades,
     // and the price has almost no pattern to learn
     const nn = K.find((k) => k.id === "LiveNN_trader"), nnIdx = K.indexOf(nn);
@@ -496,12 +505,12 @@
     const avg = change.reduce((t, v) => t + v, 0) / change.length;
     let num = 0, den = 0;
     change.forEach((v, k) => { den += (v - avg) * (v - avg); if (k) num += (v - avg) * (change[k - 1] - avg); });
-    const signed = (v) => (v >= 0 ? "+" : "\u2212") + Math.abs(v).toFixed(1) + "%";
+    const signed = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%";
     const perCoin = Math.round((coin.bought + coin.sold) / coin.n / 10) * 10;
-    root.append(html("p", { class: "viz-read board-head", text: "WHY DOESN'T THE NEURAL NETWORK WIN?" }));
-    root.append(html("p", { class: "viz-note why", text:
-      `THIS MARKET DOESN'T REWARD PREDICTION. THE WINNERS PROFIT FROM THE PRICES THEY GET, AND THE NEURAL NETWORK'S ONE-SHARE ORDERS WERE FILLED AT ${nn.buy_vs === 0 && nn.sell_vs === 0 ? "EXACTLY THE GOING PRICE" : "CLOSE TO THE GOING PRICE"}. IT ALSO BARELY TRADES: IT SPENDS THE FIRST ${M.nn.wait_rounds} OF ${n} ROUNDS COLLECTING TRAINING DATA, THEN TRADES ONE SHARE AT A TIME, ${nn.bought + nn.sold} SHARES IN ALL AGAINST ABOUT ${perCoin.toLocaleString("en-US")} FOR EACH COIN-FLIP TRADER. AND THERE IS LITTLE TO PREDICT: WITH MOSTLY RANDOM TRADERS, ONE ROUND'S PRICE CHANGE IS ALMOST UNRELATED TO THE LAST (CORRELATION ${(num / den).toFixed(2)}), AND IT LEARNS FROM ONLY ${M.nn.train_examples} EXAMPLES. ITS RESULT IS NOISE AROUND ZERO: ${signed(gain(nnIdx, n - 1))} IN THIS RUN, ${signed(M.other_run.nn)} IN ANOTHER.` }));
-    root.append(html("p", { class: "viz-note audit", text: `AUDIT ✓ ${M.audit.shares.toLocaleString("en-US")} SHARES AND $${M.audit.cash.toLocaleString("en-US")} IN CASH EXIST BEFORE THE FIRST ROUND AND AFTER EVERY ONE OF THE ${n}. TRADING ONLY MOVES THEM BETWEEN TRADERS, SO THE WINNERS' GAINS ABOVE ARE EXACTLY THE LOSERS' LOSSES.` }));
+    section("Why doesn’t the neural network win?", para(
+      `This market doesn’t reward prediction. The winners profit from the prices they get, and the neural network’s one-share orders were filled at ${nn.buy_vs === 0 && nn.sell_vs === 0 ? "exactly the going price" : "close to the going price"}. It also barely trades: it spends the first ${M.nn.wait_rounds} of ${n} rounds collecting training data, then trades one share at a time, ${nn.bought + nn.sold} shares in all against about ${perCoin.toLocaleString("en-US")} for each coin-flip trader. And there is little to predict: with mostly random traders, one round’s price change is almost unrelated to the last (correlation ${(num / den).toFixed(2)}), and it learns from only ${M.nn.train_examples} examples. Its result is noise around zero: ${signed(gain(nnIdx, n - 1))} in this run, ${signed(M.other_run.nn)} in another.`));
+    section("Audit", para(
+      `${M.audit.shares.toLocaleString("en-US")} shares and $${M.audit.cash.toLocaleString("en-US")} in cash exist before the first round and after every one of the ${n}. Trading only moves them between traders, so the winners’ gains are exactly the losers’ losses.`));
 
     let i = 0, timer = null;
     function place() {
@@ -666,6 +675,29 @@
     }, { threshold: 0.08 });
     document.querySelectorAll(".mac, .term, .win, .manual").forEach((w) => { w.classList.add("pre"); opener.observe(w); });
   }
+  // Beside a tall column, the shorter one stays in view while you scroll,
+  // provided it fits on screen.
+  const projs = Array.from(document.querySelectorAll(".proj"));
+  let balancing = 0;
+  function balance() {
+    balancing = 0;
+    const wide = window.matchMedia("(min-width: 961px)").matches;
+    projs.forEach((p) => {
+      const kids = Array.from(p.children);
+      if (kids.length !== 2) return;
+      const short = kids[0].offsetHeight <= kids[1].offsetHeight ? kids[0] : kids[1];
+      const fits = wide && short.offsetHeight <= window.innerHeight - 70;
+      kids.forEach((k) => k.classList.toggle("stick", fits && k === short));
+    });
+  }
+  const queue = () => { if (!balancing) balancing = requestAnimationFrame(balance); };
+  window.addEventListener("resize", queue);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(queue);
+    projs.forEach((p) => Array.from(p.children).forEach((k) => ro.observe(k)));
+  }
+  balance();
+
   const clock = document.getElementById("clock");
   if (clock) {
     const tick = () => { clock.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); };
