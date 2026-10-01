@@ -215,7 +215,10 @@
     function restart() { reset(); run(ctl.on); }
     again.addEventListener("click", () => { reset(); ctl.set(true); });
     pick.addEventListener("change", () => { setup(+pick.value); if (reduce) finish(); else run(ctl.on); });
-    setup(0);
+    // open on the friend-group triad; the others are in the picker
+    const first = Math.max(0, exps.findIndex((e) => e.id === "friendship_trio_balanced"));
+    pick.value = first;
+    setup(first);
     const ctl = playable(root, run, btn, ["[ PLAY ]", "[ PAUSE ]"]);
     if (reduce) finish();
   });
