@@ -65,7 +65,7 @@
 
       <div class="spot" aria-labelledby="spot-h">
         <h3 id="spot-h">Spot the leak</h3>
-        <p class="spot-intro">Four ways a backtest peeks at the future. Pick one, read the code, then tick <em>Show the fix</em>.</p>
+        <p class="spot-intro">Peeking at the future is like betting on a match with tomorrow's newspaper in your hand: you can't lose, and it tells you nothing. Here are four ways a backtest does it by accident. Pick one, watch the timeline, then tick <em>Show the fix</em>.</p>
         <div class="spot-tabs" role="tablist" aria-label="Kind of leak">
           <button role="tab" aria-selected="true" data-case="when" id="t-when">Peeks at today's close</button>
           <button role="tab" aria-selected="false" data-case="which" id="t-which" tabindex="-1">Grades on its own training data</button>
@@ -76,7 +76,7 @@
           <div class="spot-code">
             <p class="spot-label">The strategy <span>(pandas-style sketch)</span></p>
             <pre id="spot-code"></pre>
-            <label class="mac-check"><input type="checkbox" id="spot-fix"> <span>Show the fix</span></label>
+            <div class="spot-actions"><label class="mac-check"><input type="checkbox" id="spot-fix"> <span>Show the fix</span></label><button type="button" class="mac-btn" id="spot-replay">Replay</button></div>
           </div>
           <div class="spot-when">
             <p class="spot-label">What it uses, and when</p>
@@ -100,7 +100,7 @@
   <!-- 80s terminal -->
   <article class="term" id="comp559" aria-labelledby="c559-h">
     <div class="term-screen">
-      <p class="term-status"><span>RICE COMP 559</span><span>MAY 2026</span></p>
+      <p class="term-status"><span>RICE COMP 559</span><span>MAY 2026 <i class="cursor" aria-hidden="true"></i></span></p>
       <div class="proj">
         <div class="proj-text">
           <h3 id="c559-h">Sentiment dynamics on LLM agent graphs</h3>
@@ -111,12 +111,14 @@
           <p class="links"><span>Python, asyncio, Transformers, NetworkX, Ollama</span><a href="https://github.com/Shmael13/Comp559">Code</a><a href="https://github.com/Shmael13/Comp559/blob/main/Report%20-%20Final%20Up%20to%20Date/Final%20-%20COMP_559_Project.pdf">Report</a></p>
         </div>
         <figure class="fig">
-          <pre class="term-log" aria-label="Excerpt from the debate log">r00 libertarian&gt;regulator  +0.00  Global regulation of AI would stifle innovation&hellip;
+          <div class="viz" data-viz="debate">
+            <pre class="term-log" aria-label="Excerpt from the debate log">r00 libertarian&gt;regulator  +0.00  Global regulation of AI would stifle innovation&hellip;
 r13 regulator&gt;skeptic      -0.98  Enforceable global treaties are crucial for setting&hellip;
 r14 pragmatist&gt;regulator   +0.99  Enforceable global treaties are essential for setting&hellip;
 r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treaties&hellip;</pre>
           <!--FIG:comp559-->
-          <figcaption>Log lines and agreement scores from the 80-round debate, and who messaged whom.</figcaption>
+          </div>
+          <figcaption>A replay of the real debate log: 241 messages over 80 rounds, each with its agreement score.</figcaption>
         </figure>
       </div>
     </div>
@@ -133,8 +135,8 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
         <p class="links"><span>Python, PyTorch</span><a href="https://github.com/Shmael13/COMP584">Code</a></p>
       </div>
       <figure class="fig win-sunken">
-        <!--FIG:comp584-->
-        <figcaption>Held-out accuracy peaks at step 5,500, then drifts down as the agents overfit.</figcaption>
+        <div class="viz" data-viz="words"><!--FIG:comp584--></div>
+        <figcaption>The words come from the committed run's results file, one for each of the 256 objects.</figcaption>
       </figure>
     </div>
     <div class="win-status">
@@ -158,8 +160,8 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
         <p class="links"><span>Python, scikit-learn, TensorFlow/Keras</span><a href="https://github.com/Shmael13/Elec537Project">Code</a></p>
       </div>
       <figure class="fig">
-        <!--FIG:elec537-->
-        <figcaption><b>Fig. 4.1</b> Accuracy on 91 windows from four recordings the models never saw.</figcaption>
+        <div class="viz" data-viz="strip"><!--FIG:elec537--></div>
+        <figcaption><b>Fig. 4.1</b> Two whole recordings the models never saw, replayed at three times real speed.</figcaption>
       </figure>
     </div>
   </article>
@@ -167,7 +169,7 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
   <!-- 80s terminal -->
   <article class="term" id="market" aria-labelledby="mk-h">
     <div class="term-screen">
-      <p class="term-status"><span>SIM EXCHANGE</span><span>AUG 2025</span></p>
+      <p class="term-status"><span>SIM EXCHANGE</span><span>AUG 2025 <i class="cursor" aria-hidden="true"></i></span></p>
       <div class="proj">
         <div class="proj-text">
           <h3 id="mk-h">Multi-agent market simulation</h3>
@@ -178,8 +180,8 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
           <p class="links"><span>C++23, CMake, OpenMP, pybind11, Python</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Economic_Models/Multi_Agent_Market_Simulation">Code</a></p>
         </div>
         <figure class="fig">
-          <!--FIG:market-->
-          <figcaption>Price discovery over 300 ticks with 202 agents: 160 C++ traders and 42 Python ones, two of them LSTM traders.</figcaption>
+          <div class="viz" data-viz="ticker"><!--FIG:market--></div>
+          <figcaption>The price from one real 300-round run of the simulator. Drag the slider to scrub.</figcaption>
         </figure>
       </div>
     </div>
@@ -195,9 +197,8 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
         <p>A real-time artificial-life simulation in C where 800 particles of 8 types self-organize into cell-like clusters under random attraction and repulsion rules, rendered with Allegro 5. Each frame bins particles into a 14&times;14 grid with a counting sort, then computes forces per cell over its 3&times;3 neighbourhood in parallel with OpenMP. The result is the same on 1 thread or 8.</p>
         <p class="links"><span>C, OpenMP, Allegro 5</span><a href="https://github.com/Shmael13/MyProjects/tree/main/Particle_Simulator/Clusters">Code</a></p>
       </div>
-      <figure class="fig win-sunken win-screen">
-        <!--FIG:particles-->
-        <figcaption>All 800 particles after 900 frames. Colour is particle type.</figcaption>
+      <figure class="fig">
+        <div class="viz" data-viz="particles"><div class="win-sunken win-screen"><!--FIG:particles--></div></div>
       </figure>
     </div>
     <div class="win-status">
@@ -220,13 +221,8 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
         <p class="links"><span>Python, NumPy, pandas, scikit-learn, Jupyter</span><a href="https://github.com/Shmael13/ML_Projects">Code</a></p>
       </div>
       <figure class="fig">
-        <div class="svd-grid">
-          <div><img src="img/svd-k2.webp" width="480" height="271" alt="Rank 2 reconstruction: only a blur of red and green"><span>Rank 2, 0.8% of the numbers</span></div>
-          <div><img src="img/svd-k10.webp" width="480" height="271" alt="Rank 10 reconstruction: the car's outline appears, blocky"><span>Rank 10, 3.8%</span></div>
-          <div><img src="img/svd-k40.webp" width="480" height="271" alt="Rank 40 reconstruction: close to the original, slightly grainy"><span>Rank 40, 15%</span></div>
-          <div><img src="img/svd-full.webp" width="480" height="271" alt="The original image: a green toy car on a red cloth"><span>Original, rank 408</span></div>
-        </div>
-        <figcaption><b>Plate 1</b> From the SVD notebook: one image rebuilt from its top singular values, per colour channel.</figcaption>
+        <div class="viz" data-viz="svd"><img class="svd-img" src="img/svd-408.webp" width="480" height="271" alt="A green toy car on a red cloth"></div>
+        <figcaption><b>Plate 1</b> The SVD notebook's own image and method, rebuilt at 13 different ranks.</figcaption>
       </figure>
     </div>
   </article>
@@ -272,9 +268,11 @@ r79 regulator&gt;libertarian  +0.99  Exactly; without enforceable global treatie
     <a class="win-btn" href="#particles">particles</a>
     <a class="win-btn" href="#ml">ML notebooks</a>
   </nav>
-  <p class="tray">Figures drawn from each project's own data by <a href="https://github.com/Shmael13/Shmael13.github.io/tree/main/figures">build.py</a></p>
+  <p class="tray">Figures use each project's own data (<a href="https://github.com/Shmael13/Shmael13.github.io/tree/main/figures">source</a>) <span id="clock" aria-hidden="true"></span></p>
 </footer>
 
 <script src="lab.js"></script>
+<script src="data.js"></script>
+<script src="viz.js"></script>
 </body>
 </html>

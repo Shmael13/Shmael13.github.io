@@ -94,9 +94,9 @@
         el(svg, "line", { class: "axis", x1: left, x2: right, y1: 100, y2: 100 });
         // the answers: the prices of days 5 and 6
         [5, 6].forEach((d) => el(svg, "path", { class: "tri", d: `M${cx(d) - 6},88 L${cx(d) + 6},88 L${cx(d)},97 Z` }));
-        el(svg, "text", { class: "t-note", x: (cx(5) + cx(6)) / 2, y: 140, "text-anchor": "middle" }, "▼ the answers: prices of days 5 and 6");
-        if (fixed) el(svg, "text", { class: "t-lab", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "dropped");
-        else el(svg, "text", { class: "t-lab leak-t", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "contain the answers");
+        el(svg, "text", { class: "t-note arr", x: (cx(5) + cx(6)) / 2, y: 140, "text-anchor": "middle" }, "▼ the answers: prices of days 5 and 6");
+        if (fixed) el(svg, "text", { class: "t-lab arr", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "dropped");
+        else el(svg, "text", { class: "t-lab leak-t arr", x: (cx(6) + cx(7)) / 2, y: 16, "text-anchor": "middle" }, "contain the answers");
       },
     },
 
@@ -129,11 +129,11 @@
         el(svg, "text", { class: "t-note", x: (x0 + x5) / 2, y: T.axisY - 32, "text-anchor": "middle" }, "5 settings tried, results compared");
         const y = T.axisY + 66;
         if (fixed) {
-          el(svg, "rect", { class: "blk", x: x5 + 4, y: y - 7, width: x1 - x5 - 4, height: 14 });
-          el(svg, "text", { class: "t-note", x: (x5 + x1) / 2, y: y + 24, "text-anchor": "middle" }, "traded after the pick");
+          el(svg, "rect", { class: "blk arr", x: x5 + 4, y: y - 7, width: x1 - x5 - 4, height: 14 });
+          el(svg, "text", { class: "t-note arr", x: (x5 + x1) / 2, y: y + 24, "text-anchor": "middle" }, "traded after the pick");
         } else {
-          el(svg, "rect", { class: "blk leak", x: x0, y: y - 7, width: x5 - x0 - 4, height: 14 });
-          el(svg, "text", { class: "t-note leak-t", x: (x0 + x5) / 2, y: y + 24, "text-anchor": "middle" }, "traded before the pick existed");
+          el(svg, "rect", { class: "blk leak arr", x: x0, y: y - 7, width: x5 - x0 - 4, height: 14 });
+          el(svg, "text", { class: "t-note leak-t arr", x: (x0 + x5) / 2, y: y + 24, "text-anchor": "middle" }, "traded before the pick existed");
         }
       },
     },
@@ -161,7 +161,7 @@
         ]);
         if (fixed) {
           const a = T.x(0.15), b = T.x(0.85), y = T.axisY - 40, mid = (a + b) / 2;
-          el(svg, "text", { class: "t-note", x: mid, y: y - 6, "text-anchor": "middle" }, "not needed: the rescaling cancels in a ratio");
+          el(svg, "text", { class: "t-note arr", x: mid, y: y - 6, "text-anchor": "middle" }, "not needed: the rescaling cancels in a ratio");
         } else {
           arrow(T, 0.85, 0.15, true, "depends on events 9 years later");
         }
@@ -223,11 +223,46 @@
   // A curved arrow from the time the information exists to the time it's used.
   function arrow(T, fromF, toF, leak, label) {
     const a = T.x(fromF), b = T.x(toF), y = T.axisY - 12, mid = (a + b) / 2, lift = 44;
-    const cls = leak ? "arrow leak" : "arrow";
-    el(svg, "path", { class: cls, d: `M${a},${y} Q${mid},${y - lift} ${b + (b < a ? 8 : -8)},${y}` });
+    const cls = leak ? "arrow leak arr" : "arrow arr";
+    el(svg, "path", { class: cls + " stroke", d: `M${a},${y} Q${mid},${y - lift} ${b + (b < a ? 8 : -8)},${y}` });
     const dir = b < a ? 1 : -1;
     el(svg, "path", { class: cls + " head", d: `M${b},${y + 2} l${dir * 9},-10 l${dir * 3},9 z` });
-    el(svg, "text", { class: "t-note" + (leak ? " leak-t" : ""), x: mid, y: y - lift / 2 - 6, "text-anchor": "middle" }, label);
+    el(svg, "text", { class: "t-note arr" + (leak ? " leak-t" : ""), x: mid, y: y - lift / 2 - 6, "text-anchor": "middle" }, label);
+  }
+
+  // ---- animation ------------------------------------------------------------
+  // A "now" marker sweeps along the time axis, things appear as it passes
+  // them, then the arrow (or the verdict bar) draws.
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let anim = null, seen = false;
+  function animate() {
+    cancelAnimationFrame(anim);
+    svg.querySelectorAll(".now").forEach((n) => n.remove());
+    if (reduce) return;
+    const W = size();
+    const late = Array.from(svg.querySelectorAll(".arr"));
+    const early = Array.from(svg.children).filter((n) => !n.classList.contains("arr") && !n.classList.contains("axis") && !n.classList.contains("axis-head"));
+    const at = early.map((n) => n.getBBox().x);
+    early.concat(late).forEach((n) => { n.style.opacity = 0; });
+    const now = el(svg, "line", { class: "now", y1: 4, y2: svg.viewBox.baseVal.height - 4, x1: 0, x2: 0 });
+    const t0 = performance.now(), sweep = 1300;
+    function frame(t) {
+      const f = Math.min(1, (t - t0) / sweep), x = f * W;
+      now.setAttribute("x1", x); now.setAttribute("x2", x);
+      early.forEach((n, k) => { if (at[k] <= x) n.style.opacity = 1; });
+      if (f < 1) { anim = requestAnimationFrame(frame); return; }
+      now.remove();
+      late.forEach((n) => {
+        n.style.opacity = 1;
+        if (n.classList.contains("stroke")) {
+          const len = n.getTotalLength();
+          n.style.transition = "none"; n.style.strokeDasharray = len; n.style.strokeDashoffset = len;
+          n.getBoundingClientRect();
+          n.style.transition = "stroke-dashoffset 0.7s ease-out"; n.style.strokeDashoffset = 0;
+        }
+      });
+    }
+    anim = requestAnimationFrame(frame);
   }
 
   // ---- state -----------------------------------------------------------------
@@ -246,6 +281,7 @@
     });
     svg.replaceChildren();
     c.draw(fixed);
+    if (seen) animate();
     alertEl.className = "alert " + (fixed ? "is-ok" : "is-bad");
     iconEl.textContent = fixed ? "✓" : "!";
     verdictEl.textContent = v.verdict;
@@ -281,6 +317,12 @@
     });
   });
   fixEl.addEventListener("change", render);
+  const replay = document.getElementById("spot-replay");
+  if (replay) replay.addEventListener("click", animate);
+  // play the first animation when the walkthrough scrolls into view
+  new IntersectionObserver((entries, obs) => {
+    if (entries[0].isIntersecting) { seen = true; animate(); obs.disconnect(); }
+  }, { threshold: 0.4 }).observe(svg);
 
   let lastW = svg.parentElement.clientWidth;
   window.addEventListener("resize", () => {
